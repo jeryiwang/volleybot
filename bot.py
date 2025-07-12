@@ -35,7 +35,9 @@ try:
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     gc = gspread.authorize(creds)
     sheet = gc.open(GOOGLE_SHEET_NAME).worksheet(GOOGLE_SHEET_TAB)
-    print("✅ Google Sheets access ready.")
+    if sheet is None:
+        print(f" SHEET NOT GOOD")
+    print(f"✅ Google Sheets access ready. Sheet title: {sheet.title}")
 except Exception as e:
     print(f"🔥 Google Sheets Setup Error: {e}")
     sheet = None
@@ -62,14 +64,16 @@ def format_roster_message(confirmed, waitlist, sunday):
 # === BOT EVENTS ===
 @client.event
 async def on_ready():
-    print(f'✅ Logged in as {client.user}')
+    print(f"✅ Logged in as {client.user}")
+    
     if sheet:
+        print(f"📄 Sheet is valid: {sheet.title}")
         print("🔄 Starting post_roster loop...")
         post_roster.start()
     else:
-        print("❌ Google Sheet not available, skipping roster posting.")
+        print("❌ Sheet is None. Not starting loop.")
 
-@tasks.loop(minutes=1)  # Keep 1 min for testing, change later
+@tasks.loop(minutes=1)  # For testing; adjust for hourly or custom later
 async def post_roster():
     print("⏰ Running post_roster loop")
     try:
