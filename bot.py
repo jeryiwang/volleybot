@@ -22,6 +22,9 @@ GOOGLE_SHEET_TAB = "Form Responses"
 
 # === SETUP DISCORD BOT ===
 intents = discord.Intents.default()
+intents.guilds = True
+intents.members = True
+intents.presences = True
 client = discord.Client(intents=intents)
 
 # === GOOGLE SHEETS SETUP ===
