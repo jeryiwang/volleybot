@@ -17,7 +17,7 @@ GOOGLE_SHEET_NAME = "KMCD Volleyball Check-In (Responses)"
 GOOGLE_SHEET_TAB = "Form Responses"
 
 # === SETUP DISCORD BOT ===
- print("🔐 Initializing Discord access...")
+print("🔐 Initializing Discord access...")
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
