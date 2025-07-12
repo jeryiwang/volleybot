@@ -55,7 +55,7 @@ async def on_ready():
     post_roster.start()
 
 # === Roster Posting Task ===
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=60)
 async def post_roster():
     today = datetime.date.today()
     sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
