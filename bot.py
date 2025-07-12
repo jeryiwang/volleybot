@@ -8,6 +8,7 @@ import discord
 from discord.ext import tasks
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import threading
 
 # === Environment Variables ===
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -17,9 +18,8 @@ GOOGLE_SHEET_NAME = "KMCD Volleyball Check-In (Responses)"
 GOOGLE_SHEET_TAB = "Form Responses"
 PORT = int(os.environ.get("PORT", 8080))
 
-# === Minimal Flask App (for Render port binding) ===
+# === Flask App for Render Port Binding ===
 app = Flask(__name__)
-
 @app.route("/")
 def home():
     return "THM Volleyball Bot is running!"
@@ -48,17 +48,25 @@ def load_message_id():
     except:
         return None
 
+# === Clean Up Old Messages ===
+async def cleanup_old_messages():
+    await client.wait_until_ready()
+    channel = client.get_channel(CHANNEL_ID)
+    async for msg in channel.history(limit=200):
+        if msg.content.startswith("📋 THM Volleyball Roster"):
+            try:
+                await msg.delete()
+            except:
+                pass
+
 # === Startup Event ===
 @client.event
 async def on_ready():
-    channel = client.get_channel(CHANNEL_ID)
-    async for msg in channel.history(limit=100):
-        if msg.author.id == client.user.id and msg.content.startswith("📋 THM Volleyball Roster"):
-            await msg.delete()
+    await cleanup_old_messages()
     post_roster.start()
 
 # === Roster Posting Task ===
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=60)
 async def post_roster():
     today = datetime.date.today()
     sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
@@ -97,15 +105,9 @@ async def post_roster():
         msg = await channel.send(message)
         save_message_id(msg.id)
 
-# === Run both Discord bot and Flask server ===
+# === Run Discord Bot and Flask Web Server ===
 if __name__ == "__main__":
-    import threading
-
-    # Start Discord bot in a separate thread
     def run_discord():
         client.run(DISCORD_TOKEN)
-
     threading.Thread(target=run_discord).start()
-
-    # Start Flask app to bind the port
     app.run(host="0.0.0.0", port=PORT)
