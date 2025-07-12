@@ -1,76 +1,108 @@
 import os
+import json
+import datetime
+from io import StringIO
+from flask import Flask
+
 import discord
 from discord.ext import tasks
-import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from flask import Flask
-import threading
 
-# --- Flask App for Render Port Binding ---
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "VolleyBot is running."
-
-# --- Google Sheets Setup ---
+# === Environment Variables ===
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON")
 GOOGLE_SHEET_NAME = "KMCD Volleyball Check-In (Responses)"
 GOOGLE_SHEET_TAB = "Form Responses"
-DATE_COLUMN_NAME = "PARTICIPATION Date (NOT birthday!)"
+PORT = int(os.environ.get("PORT", 8080))
 
+# === Minimal Flask App (for Render port binding) ===
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "THM Volleyball Bot is running!"
+
+# === Google Sheets Setup ===
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_json = os.environ["GOOGLE_CREDS_JSON"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(eval(creds_json), scope)
+creds_dict = json.load(StringIO(GOOGLE_CREDS_JSON))
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 gc = gspread.authorize(creds)
 sheet = gc.open(GOOGLE_SHEET_NAME).worksheet(GOOGLE_SHEET_TAB)
 
-# --- Discord Setup ---
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
-
+# === Discord Setup ===
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
+# === Helpers for Message ID ===
+def save_message_id(msg_id):
+    with open("message_id.txt", "w") as f:
+        f.write(str(msg_id))
+
+def load_message_id():
+    try:
+        with open("message_id.txt", "r") as f:
+            return int(f.read().strip())
+    except:
+        return None
+
+# === Startup Event ===
 @client.event
 async def on_ready():
-    await asyncio.sleep(5)  # give Discord API time to sync fully
     channel = client.get_channel(CHANNEL_ID)
-
-    async for msg in channel.history(limit=100):
-        if msg.author.id == client.user.id and msg.content.startswith("📋 THM Volleyball Roster"):
-            await msg.delete()
-
     post_roster.start()
 
-@tasks.loop(minutes=60)
+# === Roster Posting Task ===
+@tasks.loop(minutes=1)
 async def post_roster():
     today = datetime.date.today()
     sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
-    sunday_str = sunday.strftime('%-m/%-d/%Y')
+    formatted_date = sunday.strftime('%-m/%-d/%Y')
 
-    data = sheet.get_all_records()
-    participants = [row["Name:"] for row in data if row["PARTICIPATION Date (NOT birthday!)"] == sunday_str]
-    
-    message = f"📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**\n\n"
-    message += "✅ Confirmed to Play:\n"
-    for i, name in enumerate(participants[:21], start=1):
-        message += f"{i}. {name}\n"
+    sheet_data = sheet.get_all_records()
+    participants = [
+        row['Name:'] for row in sheet_data
+        if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
+    ]
 
+    confirmed = participants[:21]
     waitlist = participants[21:]
-    message += "\n⏳ Waitlist:\n"
-    message += "None\n" if not waitlist else "\n".join(f"- {name}" for name in waitlist)
 
-    message += (
-        "\n📍 KMCD Gym | 2–5 PM\n"
-        "🚪 Enter through the double doors (north side)\n"
-        "📝 Please arrive on time — late spots may be given to waitlisters."
-    )
+    message = f"""📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**
+
+✅ Confirmed to Play:"""
+    message += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
+    message += "\n\n⏳ Waitlist:"
+    message += "\n" + "\n".join([f"- {name}" for name in waitlist]) if waitlist else "\nNone"
+    message += """
+📍 KMCD Gym | 2–5 PM  
+🚪 Enter through the double doors (north side)  
+📝 Please arrive on time — late spots may be given to waitlisters."""
 
     channel = client.get_channel(CHANNEL_ID)
-    await channel.send(message)
+    msg_id = load_message_id()
 
-# --- Start Flask server to bind a port for Render ---
-threading.Thread(target=lambda: app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))).start()
-client.run(DISCORD_TOKEN)
+    try:
+        if msg_id:
+            msg = await channel.fetch_message(msg_id)
+            await msg.edit(content=message)
+        else:
+            raise ValueError
+    except:
+        msg = await channel.send(message)
+        save_message_id(msg.id)
+
+# === Run both Discord bot and Flask server ===
+if __name__ == "__main__":
+    import threading
+
+    # Start Discord bot in a separate thread
+    def run_discord():
+        client.run(DISCORD_TOKEN)
+
+    threading.Thread(target=run_discord).start()
+
+    # Start Flask app to bind the port
+    app.run(host="0.0.0.0", port=PORT)
