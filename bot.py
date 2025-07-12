@@ -35,10 +35,10 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
+    await asyncio.sleep(5)  # give Discord API time to sync fully
     channel = client.get_channel(CHANNEL_ID)
 
-    # Delete old roster messages
-    async for msg in channel.history(limit=50):
+    async for msg in channel.history(limit=100):
         if msg.author.id == client.user.id and msg.content.startswith("📋 THM Volleyball Roster"):
             await msg.delete()
 
