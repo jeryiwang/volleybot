@@ -15,7 +15,7 @@ async def on_ready():
     print(f'✅ Logged in as {client.user}')
     post_roster.start()
 
-@tasks.loop(minutes=60)
+@tasks.loop(minutes=1)
 async def post_roster():
     # TEMP MESSAGE (we'll pull real names from Sheets later)
     today = datetime.date.today()
