@@ -2,6 +2,7 @@ import os
 import json
 import datetime
 from io import StringIO
+from flask import Flask
 
 import discord
 from discord.ext import tasks
@@ -14,6 +15,14 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON")
 GOOGLE_SHEET_NAME = "KMCD Volleyball Check-In (Responses)"
 GOOGLE_SHEET_TAB = "Form Responses"
+PORT = int(os.environ.get("PORT", 8080))
+
+# === Minimal Flask App (for Render port binding) ===
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "THM Volleyball Bot is running!"
 
 # === Google Sheets Setup ===
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -24,6 +33,7 @@ sheet = gc.open(GOOGLE_SHEET_NAME).worksheet(GOOGLE_SHEET_TAB)
 
 # === Discord Setup ===
 intents = discord.Intents.default()
+intents.message_content = True
 client = discord.Client(intents=intents)
 
 # === Helpers for Message ID ===
@@ -38,11 +48,16 @@ def load_message_id():
     except:
         return None
 
-# === Posting Logic ===
+# === Startup Event ===
 @client.event
 async def on_ready():
+    channel = client.get_channel(CHANNEL_ID)
+    async for msg in channel.history(limit=100):
+        if msg.author == client.user and msg.content.startswith("📋 THM Volleyball Roster"):
+            await msg.delete()
     post_roster.start()
 
+# === Roster Posting Task ===
 @tasks.loop(minutes=1)
 async def post_roster():
     today = datetime.date.today()
@@ -50,7 +65,10 @@ async def post_roster():
     formatted_date = sunday.strftime('%-m/%-d/%Y')
 
     sheet_data = sheet.get_all_records()
-    participants = [row['Name:'] for row in sheet_data if str(row['PARTICIPATION Date (NOT birthday!)']).startswith(formatted_date)]
+    participants = [
+        row['Name:'] for row in sheet_data
+        if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
+    ]
 
     confirmed = participants[:21]
     waitlist = participants[21:]
@@ -79,5 +97,15 @@ async def post_roster():
         msg = await channel.send(message)
         save_message_id(msg.id)
 
-# === Run Bot ===
-client.run(DISCORD_TOKEN)
+# === Run both Discord bot and Flask server ===
+if __name__ == "__main__":
+    import threading
+
+    # Start Discord bot in a separate thread
+    def run_discord():
+        client.run(DISCORD_TOKEN)
+
+    threading.Thread(target=run_discord).start()
+
+    # Start Flask app to bind the port
+    app.run(host="0.0.0.0", port=PORT)
