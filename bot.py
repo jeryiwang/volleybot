@@ -1,7 +1,11 @@
+print("🚀 bot.py has started execution")
+
 import os
 import json
 import datetime
 from io import StringIO
+from threading import Thread
+from flask import Flask
 
 import discord
 from discord.ext import tasks
@@ -17,7 +21,6 @@ GOOGLE_SHEET_NAME = "KMCD Volleyball Check-In (Responses)"
 GOOGLE_SHEET_TAB = "Form Responses"
 
 # === SETUP DISCORD BOT ===
-print("🔐 Initializing Discord access...")
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 
@@ -63,7 +66,7 @@ async def on_ready():
     else:
         print("❌ Google Sheet not available, skipping roster posting.")
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=1)  # Keep 1 min for testing, change later
 async def post_roster():
     print("⏰ Running post_roster loop")
     try:
@@ -90,6 +93,18 @@ async def post_roster():
 
     except Exception as e:
         print(f"❌ Error in post_roster: {e}")
+
+# === KEEP RENDER ALIVE ===
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_web():
+    app.run(host='0.0.0.0', port=8080)
+
+Thread(target=run_web).start()
 
 # === START BOT ===
 client.run(DISCORD_TOKEN)
