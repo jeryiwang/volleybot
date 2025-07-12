@@ -51,8 +51,8 @@ async def post_roster():
     sunday_str = sunday.strftime('%-m/%-d/%Y')
 
     data = sheet.get_all_records()
-    participants = [row["Name"] for row in data if row[DATE_COLUMN_NAME] == sunday_str]
-
+    participants = [row["Name"] for row in data if row["PARTICIPATION Date (NOT birthday!)"] == sunday_str]
+    
     message = f"📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**\n\n"
     message += "✅ Confirmed to Play:\n"
     for i, name in enumerate(participants[:21], start=1):
