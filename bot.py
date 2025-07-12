@@ -53,7 +53,7 @@ def load_message_id():
 async def on_ready():
     channel = client.get_channel(CHANNEL_ID)
     async for msg in channel.history(limit=100):
-        if msg.author == client.user and msg.content.startswith("📋 THM Volleyball Roster"):
+        if msg.author.id == client.user.id and msg.content.startswith("📋 THM Volleyball Roster"):
             await msg.delete()
     post_roster.start()
 
