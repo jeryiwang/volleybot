@@ -50,7 +50,7 @@ async def post_roster():
     formatted_date = sunday.strftime('%-m/%-d/%Y')
 
     sheet_data = sheet.get_all_records()
-    participants = [row['Name:'] for row in sheet_data if str(row['PARTICIPA']).startswith(formatted_date)]
+    participants = [row['Name:'] for row in sheet_data if str(row['PARTICIPATION Date (NOT birthday!)']).startswith(formatted_date)]
 
     confirmed = participants[:21]
     waitlist = participants[21:]
