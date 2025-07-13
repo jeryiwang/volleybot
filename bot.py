@@ -12,6 +12,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # === Environment Variables ===
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
 GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON")
 GOOGLE_SHEET_NAME = "KMCD Volleyball Check-In (Responses)"
 GOOGLE_SHEET_TAB = "Form Responses"
@@ -55,7 +56,7 @@ async def on_ready():
     post_roster.start()
 
 # === Roster Posting Task ===
-@tasks.loop(minutes=60)
+@tasks.loop(minutes=1)
 async def post_roster():
     today = datetime.date.today()
     sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
@@ -82,6 +83,7 @@ async def post_roster():
 📝 Please arrive on time — late spots may be given to waitlisters."""
 
     channel = client.get_channel(CHANNEL_ID)
+    log_channel = client.get_channel(LOG_CHANNEL_ID)
     msg_id = load_message_id()
 
     try:
@@ -93,6 +95,10 @@ async def post_roster():
     except:
         msg = await channel.send(message)
         save_message_id(msg.id)
+    
+    if log_channel:
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        await log_channel.send(f"Roster updated at `{now}`")
 
 # === Run both Discord bot and Flask server ===
 if __name__ == "__main__":
