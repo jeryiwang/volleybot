@@ -7,6 +7,7 @@ from flask import Flask
 import discord
 from discord.ext import tasks
 import gspread
+import pytz
 from oauth2client.service_account import ServiceAccountCredentials
 
 # === Environment Variables ===
@@ -97,7 +98,8 @@ async def post_roster():
         save_message_id(msg.id)
     
     if log_channel:
-        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        eastern = pytz.timezone('US/Eastern')
+        now = datetime.datetime.now(eastern).strftime('%Y-%m-%d %I:%M:%S %p %Z')
         await log_channel.send(f"Roster updated at `{now}`")
 
 # === Run both Discord bot and Flask server ===
