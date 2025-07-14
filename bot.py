@@ -53,64 +53,67 @@ def load_message_id():
 # === Startup Event ===
 @client.event
 async def on_ready():
-    channel = client.get_channel(CHANNEL_ID)
     post_roster.start()
 
 # === Roster Posting Task ===
 @tasks.loop(minutes=1)
 async def post_roster():
-    today = datetime.date.today()
-    sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
-    formatted_date = sunday.strftime('%-m/%-d/%Y')
+    try:
+        today = datetime.date.today()
+        sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
+        formatted_date = sunday.strftime('%-m/%-d/%Y')
 
-    sheet_data = sheet.get_all_records()
-    participants = [
-        row['Name:'] for row in sheet_data
-        if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
-    ]
+        sheet_data = sheet.get_all_records()
+        participants = [
+            row['Name:'] for row in sheet_data
+            if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
+        ]
 
-    confirmed = participants[:21]
-    waitlist = participants[21:]
+        confirmed = participants[:21]
+        waitlist = participants[21:]
 
-    message = f"""📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**
+        message = f"""📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**
 
 ✅ Confirmed to Play:"""
-    message += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
-    message += "\n\n⏳ Waitlist:"
-    message += "\n" + "\n".join([f"- {name}" for name in waitlist]) if waitlist else "\nNone"
-    message += """
+        message += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
+        message += "\n\n⏳ Waitlist:"
+        message += "\n" + "\n".join([f"- {name}" for name in waitlist]) if waitlist else "\nNone"
+        message += """
+
 📍 KMCD Gym | 2–5 PM  
 🚪 Enter through the double doors (north side)  
 📝 Please arrive on time — late spots may be given to waitlisters."""
 
-    channel = client.get_channel(CHANNEL_ID)
-    log_channel = client.get_channel(LOG_CHANNEL_ID)
-    msg_id = load_message_id()
+        channel = client.get_channel(CHANNEL_ID)
+        log_channel = client.get_channel(LOG_CHANNEL_ID)
+        msg_id = load_message_id()
 
-    try:
-        if msg_id:
-            msg = await channel.fetch_message(msg_id)
-            await msg.edit(content=message)
-        else:
-            raise ValueError
-    except:
-        msg = await channel.send(message)
-        save_message_id(msg.id)
-    
-    if log_channel:
-        eastern = pytz.timezone('US/Eastern')
-        now = datetime.datetime.now(eastern).strftime('%Y-%m-%d %I:%M:%S %p %Z')
-        await log_channel.send(f"Roster updated at `{now}`")
+        try:
+            if msg_id:
+                msg = await channel.fetch_message(msg_id)
+                await msg.edit(content=message)
+            else:
+                raise ValueError
+        except:
+            msg = await channel.send(message)
+            save_message_id(msg.id)
+
+        # Send success log
+        if log_channel:
+            eastern = pytz.timezone('US/Eastern')
+            now = datetime.datetime.now(eastern).strftime('%Y-%m-%d %I:%M:%S %p %Z')
+            await log_channel.send(f"✅ Roster updated at `{now}`")
+    except Exception as e:
+        log_channel = client.get_channel(LOG_CHANNEL_ID)
+        if log_channel:
+            await log_channel.send(f"❌ Roster update failed: `{str(e)}`")
 
 # === Run both Discord bot and Flask server ===
 if __name__ == "__main__":
     import threading
 
-    # Start Discord bot in a separate thread
     def run_discord():
         client.run(DISCORD_TOKEN)
 
     threading.Thread(target=run_discord).start()
-
-    # Start Flask app to bind the port
     app.run(host="0.0.0.0", port=PORT)
