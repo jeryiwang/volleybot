@@ -98,16 +98,20 @@ async def post_roster():
             msg = await channel.send(message)
             save_message_id(msg.id)
 
-        # Send success log
+        # Send success log every 15 minutes only
         if log_channel:
             eastern = pytz.timezone('US/Eastern')
-            now = datetime.datetime.now(eastern).strftime('%Y-%m-%d %I:%M:%S %p %Z')
-            await log_channel.send(f"✅ Roster updated at `{now}`")
+            now_dt = datetime.datetime.now(eastern)
+            if now_dt.minute % 15 == 0:
+                now = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
+                await log_channel.send(f"✅ Roster updated at `{now}`")
     except Exception as e:
         log_channel = client.get_channel(LOG_CHANNEL_ID)
-        if log_channel:
-            await log_channel.send(f"❌ Roster update failed: `{str(e)}`")
-
+        eastern = pytz.timezone('US/Eastern')
+        now_dt = datetime.datetime.now(eastern)
+        if log_channel and now_dt.minute % 15 == 0:
+            now = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
+            await log_channel.send(f"❌ Roster update failed at `{now}`: `{str(e)}`")
 # === Run both Discord bot and Flask server ===
 if __name__ == "__main__":
     import threading
