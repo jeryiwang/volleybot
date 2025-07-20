@@ -56,7 +56,7 @@ async def on_ready():
     post_roster.start()
 
 # === Roster Posting Task ===
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=5)
 async def post_roster():
     try:
         today = datetime.date.today()
@@ -91,7 +91,8 @@ async def post_roster():
         try:
             if msg_id:
                 msg = await channel.fetch_message(msg_id)
-                await msg.edit(content=message)
+                if msg.content != message:
+                    await msg.edit(content=message)
             else:
                 raise ValueError
         except:
