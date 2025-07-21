@@ -56,7 +56,7 @@ async def on_ready():
     post_roster.start()
 
 # === Roster Posting Task ===
-@tasks.loop(minutes=5)
+@tasks.loop(minutes=1)
 async def post_roster():
     try:
         today = datetime.date.today()
