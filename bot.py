@@ -53,7 +53,10 @@ def load_message_id():
 # === Startup Event ===
 @client.event
 async def on_ready():
-    post_roster.start()
+    if not post_roster.is_running():
+        post_roster.start()
+    else:
+        print("post_roster loop already running.")
 
 # === Roster Posting Task ===
 @tasks.loop(minutes=1)
