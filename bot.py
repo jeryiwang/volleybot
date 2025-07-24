@@ -1,7 +1,6 @@
 import os
 import json
 import datetime
-from datetime import datetime
 from io import StringIO
 from flask import Flask, request
 
@@ -31,7 +30,7 @@ def home():
 def keepalive():
     user_agent = request.headers.get('User-Agent', 'unknown')
     ip = request.remote_addr
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     print(f"[{timestamp}] Keepalive ping received from {ip}, User-Agent: {user_agent}")
     return "Alive and kickin'", 200
