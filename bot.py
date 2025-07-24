@@ -26,6 +26,15 @@ app = Flask(__name__)
 def home():
     return "THM Volleyball Bot is running!"
 
+@app.route('/keepalive')
+def keepalive():
+    user_agent = request.headers.get('User-Agent', 'unknown')
+    ip = request.remote_addr
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    print(f"[{timestamp}] Keepalive ping received from {ip}, User-Agent: {user_agent}")
+    return "Alive and kickin'", 200
+
 # === Google Sheets Setup ===
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds_dict = json.load(StringIO(GOOGLE_CREDS_JSON))
