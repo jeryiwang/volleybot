@@ -81,6 +81,47 @@ def get_next_sunday():
     today = datetime.date.today()
     return today + datetime.timedelta((6 - today.weekday()) % 7)
 
+async def update_roster_message(cancelled=False, reason=""):
+    sunday = get_next_sunday()
+    formatted_date = sunday.strftime('%-m/%-d/%Y')
+
+    sheet_data = sheet.get_all_records()
+    participants = [
+        row['Name:'] for row in sheet_data
+        if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
+    ]
+
+    confirmed = participants[:21]
+    waitlist = participants[21:]
+
+    message = ""
+    if cancelled:
+        message += f"🚫 Sunday volleyball is CANCELLED – {sunday.strftime('%B %d, %Y')}\nReason: {reason}\n\n"
+
+    message += f"""📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**
+
+✅ Confirmed to Play:"""
+    message += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
+    message += "\n\n⏳ Waitlist:"
+    message += "\n" + "\n".join([f"- {name}" for name in waitlist]) if waitlist else "\nNone"
+    message += """
+
+📍 KMCD Gym | 2–5 PM  
+🚪 Enter through the double doors (north side)  
+📝 Please arrive on time — late spots may be given to waitlisters."""
+
+    msg_id = load_message_id()
+    channel = client.get_channel(ROSTER_CHANNEL_ID)
+    try:
+        if msg_id and channel:
+            msg = await channel.fetch_message(msg_id)
+            await msg.edit(content=message)
+        else:
+                raise ValueError
+    except:
+        msg = await channel.send(message)
+        save_message_id(msg.id)
+
 # === Slash Commands ===
 @client.tree.command(name="cancel", description="Cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
@@ -98,8 +139,12 @@ async def cancel(interaction: discord.Interaction, reason: str = "No reason prov
     await interaction.response.send_message("✅ Cancelled! Announcement has been posted to #announcements.", ephemeral=True)
 
     channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)
+    roster_channel = client.get_channel(ROSTER_CHANNEL_ID)
     if channel:
         await channel.send(f"🛑 **Sunday volleyball has been CANCELLED – {formatted_date}**\nReason: {reason}\nBy: {interaction.user.mention}")
+    if roster_channel:
+        await update_roster_message(cancelled=True, reason=reason)
+        
 
 @client.tree.command(name="uncancel", description="Un-cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
@@ -111,54 +156,19 @@ async def uncancel(interaction: discord.Interaction):
     await interaction.response.send_message("✅ Uncancelled! Announcement has been posted to #announcements.", ephemeral=True)
 
     channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)
+    roster_channel = client.get_channel(ROSTER_CHANNEL_ID)
     if channel:
         await channel.send(f"✅ **Sunday volleyball is back on – {formatted_date}!**")
+    if roster_channel:
+        await update_roster_message(cancelled=False)
 
 # === Roster Posting Task ===
 @tasks.loop(minutes=1)
 async def post_roster():
     try:
         state = load_cancel_state()
-        sunday = get_next_sunday()
-        formatted_date = sunday.strftime('%-m/%-d/%Y')
 
-        sheet_data = sheet.get_all_records()
-        participants = [
-            row['Name:'] for row in sheet_data
-            if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
-        ]
-
-        confirmed = participants[:21]
-        waitlist = participants[21:]
-
-        top_line = f"🚫 Sunday volleyball is CANCELLED – {sunday.strftime('%B %d, %Y')}\n" if state.get("is_cancelled") else ""
-
-        message = top_line + f"""📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**
-
-✅ Confirmed to Play:"""
-        message += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
-        message += "\n\n⏳ Waitlist:"
-        message += "\n" + "\n".join([f"- {name}" for name in waitlist]) if waitlist else "\nNone"
-        message += """
-
-📍 KMCD Gym | 2–5 PM  
-🚪 Enter through the double doors (north side)  
-📝 Please arrive on time — late spots may be given to waitlisters."""
-
-        channel = client.get_channel(ROSTER_CHANNEL_ID)
-        log_channel = client.get_channel(LOG_CHANNEL_ID)
-        msg_id = load_message_id()
-
-        try:
-            if msg_id:
-                msg = await channel.fetch_message(msg_id)
-                if msg.content != message:
-                    await msg.edit(content=message)
-            else:
-                raise ValueError
-        except:
-            msg = await channel.send(message)
-            save_message_id(msg.id)
+        await update_roster_message(cancelled=state.get("is_cancelled"), reason=state.get("reason"))
 
         if log_channel:
             eastern = pytz.timezone('US/Eastern')
