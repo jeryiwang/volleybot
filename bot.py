@@ -92,7 +92,7 @@ async def cancel(interaction: discord.Interaction, reason: str = "No reason prov
 
     channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)  # Already set to announcements channel
     if channel:
-        await channel.send(f"🛑 **Sunday volleyball has been CANCELLED.**\nReason: {reason}")
+        await channel.send(f"🛑 **Sunday volleyball has been CANCELLED.**\nReason: {reason}\nBy: {interaction.user.mention}")
 
 @client.tree.command(name="uncancel", description="Un-cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
