@@ -3,6 +3,7 @@ import json
 import datetime
 from io import StringIO
 from flask import Flask, request
+import logging
 
 import discord
 from discord.ext import tasks, commands
@@ -10,9 +11,14 @@ import gspread
 import pytz
 from oauth2client.service_account import ServiceAccountCredentials
 
+# === Logger Setup ===
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # === Environment Variables ===
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+ANNOUNCEMENTS_CHANNEL_ID = int(os.getenv("ANNOUNCEMENTS_CHANNEL_ID"))
+ROSTER_CHANNEL_ID = int(os.getenv("ROSTER_CHANNEL_ID"))
 LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
 GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON")
 GOOGLE_SHEET_NAME = "KMCD Volleyball Check-In (Responses)"
@@ -31,7 +37,7 @@ def keepalive():
     user_agent = request.headers.get('User-Agent', 'unknown')
     ip = request.remote_addr
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f"[{timestamp}] Keepalive ping received from {ip}, User-Agent: {user_agent}")
+    logger.info(f"[{timestamp}] Keepalive ping received from {ip}, User-Agent: {user_agent}")
     return "Alive and kickin'", 200
 
 # === Google Sheets Setup ===
@@ -82,13 +88,21 @@ async def cancel(interaction: discord.Interaction, reason: str = "No reason prov
     state["cancelled_by"] = interaction.user.display_name
     state["timestamp"] = datetime.datetime.now().isoformat()
     save_cancel_state(state)
-    await interaction.response.send_message(f"🛑 Sunday volleyball has been **cancelled**.\nReason: {reason}")
+    await interaction.response.send_message("✅ Cancelled! Announcement has been posted to #announcements.", ephemeral=True)
+
+    channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)  # Already set to announcements channel
+    if channel:
+        await channel.send(f"🛑 **Sunday volleyball has been CANCELLED.**\nReason: {reason}")
 
 @client.tree.command(name="uncancel", description="Un-cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
 async def uncancel(interaction: discord.Interaction):
     save_cancel_state({"is_cancelled": False, "reason": "", "cancelled_by": "", "timestamp": ""})
-    await interaction.response.send_message("✅ Sunday volleyball is **back on**!")
+    await interaction.response.send_message("✅ Uncancelled! Announcement has been posted to #announcements.", ephemeral=True)
+
+    channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)
+    if channel:
+        await channel.send("✅ **Sunday volleyball is back on!**")
 
 # === Roster Posting Task ===
 @tasks.loop(minutes=1)
@@ -123,7 +137,7 @@ async def post_roster():
 🚪 Enter through the double doors (north side)  
 📝 Please arrive on time — late spots may be given to waitlisters."""
 
-        channel = client.get_channel(CHANNEL_ID)
+        channel = client.get_channel(ROSTER_CHANNEL_ID)
         log_channel = client.get_channel(LOG_CHANNEL_ID)
         msg_id = load_message_id()
 
@@ -157,14 +171,14 @@ async def post_roster():
 async def on_ready():
     try:
         synced = await client.tree.sync()
-        print(f"✅ Synced {len(synced)} slash commands.")
+        logger.info(f"✅ Synced {len(synced)} slash commands.")
     except Exception as e:
-        print(f"Slash command sync failed: {e}")
+        logger.info(f"Slash command sync failed: {e}")
 
     if not post_roster.is_running():
         post_roster.start()
     else:
-        print("post_roster loop already running.")
+        logger.info("post_roster loop already running.")
 
 # === Run both Discord bot and Flask server ===
 if __name__ == "__main__":
