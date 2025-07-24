@@ -77,11 +77,18 @@ def save_cancel_state(state):
     with open(CANCEL_FILE, "w") as f:
         json.dump(state, f, indent=2)
 
+def get_next_sunday():
+    today = datetime.date.today()
+    return today + datetime.timedelta((6 - today.weekday()) % 7)
+
 # === Slash Commands ===
 @client.tree.command(name="cancel", description="Cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
 @discord.app_commands.describe(reason="Reason for cancellation")
 async def cancel(interaction: discord.Interaction, reason: str = "No reason provided"):
+    sunday = get_next_sunday()
+    formatted_date = sunday.strftime('%B %d, %Y')
+
     state = load_cancel_state()
     state["is_cancelled"] = True
     state["reason"] = reason
@@ -90,30 +97,29 @@ async def cancel(interaction: discord.Interaction, reason: str = "No reason prov
     save_cancel_state(state)
     await interaction.response.send_message("✅ Cancelled! Announcement has been posted to #announcements.", ephemeral=True)
 
-    channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)  # Already set to announcements channel
+    channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)
     if channel:
-        await channel.send(f"🛑 **Sunday volleyball has been CANCELLED.**\nReason: {reason}\nBy: {interaction.user.mention}")
+        await channel.send(f"🛑 **Sunday volleyball has been CANCELLED – {formatted_date}**\nReason: {reason}\nBy: {interaction.user.mention}")
 
 @client.tree.command(name="uncancel", description="Un-cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
 async def uncancel(interaction: discord.Interaction):
+    sunday = get_next_sunday()
+    formatted_date = sunday.strftime('%B %d, %Y')
+
     save_cancel_state({"is_cancelled": False, "reason": "", "cancelled_by": "", "timestamp": ""})
     await interaction.response.send_message("✅ Uncancelled! Announcement has been posted to #announcements.", ephemeral=True)
 
     channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)
     if channel:
-        await channel.send("✅ **Sunday volleyball is back on!**")
+        await channel.send(f"✅ **Sunday volleyball is back on – {formatted_date}!**")
 
 # === Roster Posting Task ===
 @tasks.loop(minutes=1)
 async def post_roster():
     try:
         state = load_cancel_state()
-        if state.get("is_cancelled"):
-            return
-
-        today = datetime.date.today()
-        sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
+        sunday = get_next_sunday()
         formatted_date = sunday.strftime('%-m/%-d/%Y')
 
         sheet_data = sheet.get_all_records()
@@ -125,7 +131,9 @@ async def post_roster():
         confirmed = participants[:21]
         waitlist = participants[21:]
 
-        message = f"""📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**
+        top_line = f"🚫 Sunday volleyball is CANCELLED – {sunday.strftime('%B %d, %Y')}\n" if state.get("is_cancelled") else ""
+
+        message = top_line + f"""📋 **THM Volleyball Roster – Sunday, {sunday.strftime('%B %d')}**
 
 ✅ Confirmed to Play:"""
         message += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
