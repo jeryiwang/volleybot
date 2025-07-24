@@ -26,10 +26,15 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
   - Refreshes the roster from the sheet
 - This keeps the JSON lean and avoids clutter from past weeks.
 
+### 🩺 Heartbeat Monitoring  
+- Each time the bot updates the roster, it records the current time.  
+- A separate heartbeat loop runs every 15 minutes to check if the last update was within the past 5 minutes.  
+- It then logs a ✅ healthy or ❌ stale warning message to the log channed based upon this check.
+- Helps catch silent failures by monitoring whether the bot is still working as expected.
+
 ### 🔄 Frequent Roster Updates
 - The bot runs continuously (hosted on Render) and updates the roster every minute.
 - If the roster hasn’t changed, it doesn’t re-post to avoid spam.
-- Posts a log message every 15 minutes for heartbeat monitoring.
 
 ### 🧠 Hosting & Uptime
 - Hosted on [Render.com](https://render.com)
@@ -45,7 +50,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - `Flask` (for the keepalive endpoint)
 - `gspread` + `oauth2client` (for Google Sheets integration)
 - Hosted on **Render**
-- Monitored with **UptimeRobot** and **cron-job.org**
+- Monitored with **UptimeRobot**, **cron-job.org**, and internal heartbeat check
 
 ---
 
@@ -76,6 +81,10 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
    - `cancel_state.json`: holds cancellation info for the *current* Sunday only
    - `message_id.txt`: tracks the latest Discord message ID so it can be edited instead of reposted
 
+4. **Health Monitoring**
+   - `last_post_roster_time`: updated after each successful `post_roster()` run
+   - A 15-minute watchdog task checks if this timestamp is stale and logs health status accordingly
+
 ---
 
 ## ✍️ To-Do / Future Ideas
@@ -84,4 +93,5 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - 📈 Attendance tracking across weeks
 - 📣 Auto-post to Facebook
 - 🔔 Waitlist promotion notifications
-- 🧠 Smarter DM reminders for players
+- 🤖 DM reminders for players
+- 🔐 Admin dashboard or config via slash commands
