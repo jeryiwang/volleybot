@@ -2,7 +2,7 @@ import os
 import json
 import datetime
 from io import StringIO
-from flask import Flask
+from flask import Flask, request
 
 import discord
 from discord.ext import tasks
