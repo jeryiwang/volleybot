@@ -14,6 +14,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 # === Logger Setup ===
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+last_post_roster_time = None  # Updated by post_roster every successful run
 
 # === Environment Variables ===
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -143,6 +144,22 @@ async def update_roster_message(cancelled=False, reason=""):
         msg = await channel.send(message)
         save_message_id(msg.id)
 
+async def log_to_channel(channel, prefix, error=None):
+    if not channel:
+        return
+
+    eastern = pytz.timezone('US/Eastern')
+    now_dt = datetime.datetime.now(eastern)
+
+    if now_dt.minute % 15 != 0:
+        return
+
+    now = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
+    msg = f"{prefix} `{now}`"
+    if error:
+        msg += f": `{str(error)}`"
+    await channel.send(msg)
+
 # === Slash Commands ===
 @client.tree.command(name="cancel", description="Cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
@@ -186,24 +203,29 @@ async def uncancel(interaction: discord.Interaction):
 # === Roster Posting Task ===
 @tasks.loop(minutes=1)
 async def post_roster():
+    global last_post_roster_time
+    
     try:
         state = load_cancel_state()
-
         await update_roster_message(cancelled=state.get("is_cancelled"), reason=state.get("reason"))
-
-        if log_channel:
-            eastern = pytz.timezone('US/Eastern')
-            now_dt = datetime.datetime.now(eastern)
-            if now_dt.minute % 15 == 0:
-                now = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
-                await log_channel.send(f"✅ Roster updated at `{now}`")
+        last_post_roster_time = datetime.datetime.now(pytz.timezone('US/Eastern'))
     except Exception as e:
-        log_channel = client.get_channel(LOG_CHANNEL_ID)
-        eastern = pytz.timezone('US/Eastern')
-        now_dt = datetime.datetime.now(eastern)
-        if log_channel and now_dt.minute % 15 == 0:
-            now = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
-            await log_channel.send(f"❌ Roster update failed at `{now}`: `{str(e)}`")
+        logger.error(f"post_roster() failed: {e}", exc_info=True)
+
+# === Heartbeat Task ===
+@tasks.loop(minutes=15)
+async def post_roster_heartbeat():
+    log_channel = client.get_channel(LOG_CHANNEL_ID)
+    if not log_channel:
+        return
+
+    eastern = pytz.timezone('US/Eastern')
+    now = datetime.datetime.now(eastern)
+
+    if last_post_roster_time and (now - last_post_roster_time).total_seconds() < 300:
+        await log_to_channel(log_channel, "✅ `post_roster()` is alive. Last run:", error=last_post_roster_time.strftime('%Y-%m-%d %I:%M:%S %p %Z'))
+    else:
+        await log_to_channel(log_channel, "❌ `post_roster()` has not run in the last 5 minutes. Last seen:", error=str(last_post_roster_time))
 
 # === Startup ===
 @client.event
@@ -218,6 +240,11 @@ async def on_ready():
         post_roster.start()
     else:
         logger.info("post_roster loop already running.")
+
+    if not post_roster_heartbeat.is_running():
+        post_roster_heartbeat.start()
+    else:
+        logger.info("post_roster_heartbeat loop already running.")
 
 # === Run both Discord bot and Flask server ===
 if __name__ == "__main__":
