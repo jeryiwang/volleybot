@@ -5,7 +5,7 @@ from io import StringIO
 from flask import Flask, request
 
 import discord
-from discord.ext import tasks
+from discord.ext import tasks, commands
 import gspread
 import pytz
 from oauth2client.service_account import ServiceAccountCredentials
@@ -31,7 +31,6 @@ def keepalive():
     user_agent = request.headers.get('User-Agent', 'unknown')
     ip = request.remote_addr
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
     print(f"[{timestamp}] Keepalive ping received from {ip}, User-Agent: {user_agent}")
     return "Alive and kickin'", 200
 
@@ -45,9 +44,11 @@ sheet = gc.open(GOOGLE_SHEET_NAME).worksheet(GOOGLE_SHEET_TAB)
 # === Discord Setup ===
 intents = discord.Intents.default()
 intents.message_content = True
-client = discord.Client(intents=intents)
+client = commands.Bot(command_prefix="!", intents=intents)
 
-# === Helpers for Message ID ===
+CANCEL_FILE = "cancel_state.json"
+
+# === Helpers ===
 def save_message_id(msg_id):
     with open("message_id.txt", "w") as f:
         f.write(str(msg_id))
@@ -59,18 +60,44 @@ def load_message_id():
     except:
         return None
 
-# === Startup Event ===
-@client.event
-async def on_ready():
-    if not post_roster.is_running():
-        post_roster.start()
-    else:
-        print("post_roster loop already running.")
+def load_cancel_state():
+    try:
+        with open(CANCEL_FILE, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"is_cancelled": False, "reason": "", "cancelled_by": "", "timestamp": ""}
+
+def save_cancel_state(state):
+    with open(CANCEL_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+# === Slash Commands ===
+@client.tree.command(name="cancel", description="Cancel this Sunday's volleyball session")
+@discord.app_commands.default_permissions(administrator=True)
+@discord.app_commands.describe(reason="Reason for cancellation")
+async def cancel(interaction: discord.Interaction, reason: str = "No reason provided"):
+    state = load_cancel_state()
+    state["is_cancelled"] = True
+    state["reason"] = reason
+    state["cancelled_by"] = interaction.user.display_name
+    state["timestamp"] = datetime.datetime.now().isoformat()
+    save_cancel_state(state)
+    await interaction.response.send_message(f"🛑 Sunday volleyball has been **cancelled**.\nReason: {reason}")
+
+@client.tree.command(name="uncancel", description="Un-cancel this Sunday's volleyball session")
+@discord.app_commands.default_permissions(administrator=True)
+async def uncancel(interaction: discord.Interaction):
+    save_cancel_state({"is_cancelled": False, "reason": "", "cancelled_by": "", "timestamp": ""})
+    await interaction.response.send_message("✅ Sunday volleyball is **back on**!")
 
 # === Roster Posting Task ===
 @tasks.loop(minutes=1)
 async def post_roster():
     try:
+        state = load_cancel_state()
+        if state.get("is_cancelled"):
+            return
+
         today = datetime.date.today()
         sunday = today + datetime.timedelta((6 - today.weekday()) % 7)
         formatted_date = sunday.strftime('%-m/%-d/%Y')
@@ -111,7 +138,6 @@ async def post_roster():
             msg = await channel.send(message)
             save_message_id(msg.id)
 
-        # Send success log every 15 minutes only
         if log_channel:
             eastern = pytz.timezone('US/Eastern')
             now_dt = datetime.datetime.now(eastern)
@@ -125,6 +151,21 @@ async def post_roster():
         if log_channel and now_dt.minute % 15 == 0:
             now = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
             await log_channel.send(f"❌ Roster update failed at `{now}`: `{str(e)}`")
+
+# === Startup ===
+@client.event
+async def on_ready():
+    try:
+        synced = await client.tree.sync()
+        print(f"✅ Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"Slash command sync failed: {e}")
+
+    if not post_roster.is_running():
+        post_roster.start()
+    else:
+        print("post_roster loop already running.")
+
 # === Run both Discord bot and Flask server ===
 if __name__ == "__main__":
     import threading
