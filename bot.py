@@ -67,15 +67,36 @@ def load_message_id():
         return None
 
 def load_cancel_state():
+    sunday = get_next_sunday()
+    sunday_key = sunday.isoformat()
+
     try:
         with open(CANCEL_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"is_cancelled": False, "reason": "", "cancelled_by": "", "timestamp": ""}
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {}
+
+    # If current week not in file, reset everything
+    if sunday_key not in data:
+        data = {
+            sunday_key: {
+                "is_cancelled": False,
+                "reason": "",
+                "cancelled_by": "",
+                "timestamp": ""
+            }
+        }
+        save_cancel_state(data)
+
+    return data[sunday_key]
 
 def save_cancel_state(state):
+    sunday = get_next_sunday()
+    sunday_key = sunday.isoformat()
+
+    data = {sunday_key: state}
     with open(CANCEL_FILE, "w") as f:
-        json.dump(state, f, indent=2)
+        json.dump(data, f, indent=2)
 
 def get_next_sunday():
     today = datetime.date.today()
