@@ -151,9 +151,6 @@ async def log_to_channel(channel, prefix, error=None):
     eastern = pytz.timezone('US/Eastern')
     now_dt = datetime.datetime.now(eastern)
 
-    if now_dt.minute % 15 != 0:
-        return
-
     now = now_dt.strftime('%Y-%m-%d %I:%M:%S %p %Z')
     msg = f"{prefix} `{now}`"
     if error:
@@ -213,7 +210,7 @@ async def post_roster():
         logger.error(f"post_roster() failed: {e}", exc_info=True)
 
 # === Heartbeat Task ===
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=15)
 async def post_roster_heartbeat():
     logger.info(f"Heartbeat Loop Start")
     log_channel = client.get_channel(LOG_CHANNEL_ID)
