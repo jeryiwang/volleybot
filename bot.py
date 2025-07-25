@@ -213,10 +213,12 @@ async def post_roster():
         logger.error(f"post_roster() failed: {e}", exc_info=True)
 
 # === Heartbeat Task ===
-@tasks.loop(minutes=15)
+@tasks.loop(minutes=1)
 async def post_roster_heartbeat():
+    logger.info(f"Heartbeat Loop Start")
     log_channel = client.get_channel(LOG_CHANNEL_ID)
     if not log_channel:
+        logger.error(f"log channel not found!")
         return
 
     eastern = pytz.timezone('US/Eastern')
