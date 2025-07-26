@@ -16,7 +16,7 @@ import pytz
 import threading
 
 
-from bot.version import __version__
+from version import __version__
 from discord.ext import tasks
 from discord_bot import client, update_roster_message, log_to_channel
 from flask import Flask, request
