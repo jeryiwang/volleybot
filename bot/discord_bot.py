@@ -13,7 +13,7 @@ import discord
 import datetime
 import os
 
-from bot.version import __version__
+from version import __version__
 from discord.ext import commands
 from sheets import get_confirmed_and_waitlist
 from utils import get_next_sunday, format_datetime, load_message_id, save_message_id, save_cancel_state
