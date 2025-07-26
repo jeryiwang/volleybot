@@ -1,7 +1,19 @@
+"""
+File: discord_bot.py
+Author: Jerry Wang
+Date: 2025-07-26
+
+Handles Discord bot setup, slash commands, and roster message updates.
+
+Includes logic for posting/updating the weekly roster, handling /cancel and /uncancel
+commands, and sending logs to a designated channel.
+"""
+
 import discord
 import datetime
 import os
 
+from bot.version import __version__
 from discord.ext import commands
 from sheets import get_confirmed_and_waitlist
 from utils import get_next_sunday, format_datetime, load_message_id, save_message_id, save_cancel_state
@@ -20,7 +32,7 @@ async def update_roster_message(cancelled=False, reason=""):
 
     message = ""
     if cancelled:
-        message += f"Sunday volleyball is CANCELLED - {sunday.strftime('%B %d, %Y')}\nReason: {reason}\n\n"
+        message += f"🚫 Sunday volleyball is CANCELLED - {sunday.strftime('%B %d, %Y')}\nReason: {reason}\n\n"
 
     message += f"""📋 **THM Volleyball Roster - Sunday, {sunday.strftime('%B %d')}**
 
@@ -46,7 +58,7 @@ async def update_roster_message(cancelled=False, reason=""):
         msg = await channel.send(message)
         save_message_id(msg.id)
 
-# === Log to Channel Utility ===
+# === Log to Discord Channel Utility ===
 async def log_to_channel(channel, prefix, error=None):
     if not channel:
         return
@@ -57,7 +69,7 @@ async def log_to_channel(channel, prefix, error=None):
         msg += f": `{str(error)}`"
     await channel.send(msg)
 
-# === Cancel Command ===
+# === Discord Cancel Command ===
 @client.tree.command(name="cancel", description="Cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
 @discord.app_commands.describe(reason="Reason for cancellation")
@@ -81,7 +93,7 @@ async def cancel(interaction: discord.Interaction, reason: str = "No reason prov
     if roster_channel:
         await update_roster_message(cancelled=True, reason=reason)
 
-# === Uncancel Command ===
+# === Discord Uncancel Command ===
 @client.tree.command(name="uncancel", description="Un-cancel this Sunday's volleyball session")
 @discord.app_commands.default_permissions(administrator=True)
 async def uncancel(interaction: discord.Interaction):
@@ -102,3 +114,8 @@ async def uncancel(interaction: discord.Interaction):
         await channel.send(f"✅ **Sunday volleyball is back on – {formatted_date}!**")
     if roster_channel:
         await update_roster_message(cancelled=False)
+
+# === Discord Version Command ===
+@client.tree.command(name="version", description="Show the current bot version")
+async def version_command(interaction: discord.Interaction):
+    await interaction.response.send_message(f"🤖 THM Volleyball Bot Version: `{__version__}`", ephemeral=True)

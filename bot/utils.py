@@ -1,11 +1,17 @@
+"""
+File: utils.py
+Author: Jerry Wang
+Date: 2025-07-26
+
+Shared utility functions for datetime handling, file I/O, and state management.
+
+Includes helpers to calculate the next Sunday, read/write JSON files, and track
+roster cancellation and message ID state.
+"""
+
 import datetime
 import json
-import logging
 import pytz
-
-# === Logger Setup ===
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # === State Files ===
 MESSAGE_ID_FILE = "message_id.txt"

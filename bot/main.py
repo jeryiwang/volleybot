@@ -1,8 +1,22 @@
+"""
+File: main.py
+Author: Jerry Wang
+Date: 2025-07-26
+
+Main entry point for the THM Volleyball bot.
+
+Runs the Flask keepalive server and starts the Discord client with scheduled tasks
+to post and monitor the weekly volleyball roster.
+"""
+
 import datetime
 import logging
 import os
 import pytz
+import threading
 
+
+from bot.version import __version__
 from discord.ext import tasks
 from discord_bot import client, update_roster_message, log_to_channel
 from flask import Flask, request
@@ -84,7 +98,7 @@ async def on_ready():
 
 # === Main Entry Point ===
 if __name__ == "__main__":
-    import threading
+    logger.info(f"Starting THM Volleyball Bot v{__version__}")
 
     def run_discord():
         client.run(DISCORD_TOKEN)

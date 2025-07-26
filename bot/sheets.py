@@ -1,3 +1,14 @@
+"""
+File: sheets.py
+Author: Jerry Wang
+Date: 2025-07-26
+
+Provides integration with the Google Sheets sign-up form.
+
+Fetches participant names for the upcoming Sunday and separates them into
+confirmed and waitlist groups based on order.
+"""
+
 import gspread
 import json
 import os

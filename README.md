@@ -17,6 +17,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 ### 🛑 Slash Commands
 - `/cancel [reason]`: Cancels volleyball for the week and updates both the announcements and roster channels with a 🚫 message.
 - `/uncancel`: Reverts cancellation and removes the 🚫 notice from the roster.
+- `/version`: Displays the current bot version (ephemeral response to user).
 
 ### 🔁 Weekly Reset Logic
 - Each Sunday is treated as a fresh week.
@@ -39,6 +40,10 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Kept awake with `UptimeRobot` and `cron-job.org` pinging the `/keepalive` endpoint
 - Local files store state between runs (`cancel_state.json`, `message_id.txt`)
 
+### 📦 Bot Versioning
+- Displays the current version in logs and via `/version` slash command.
+- Version is tracked centrally in `bot/version.py` using Semantic Versioning (e.g., `1.0.0`).
+
 ---
 
 ## ⚙️ Tech Stack
@@ -58,6 +63,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 |----------------|-------------------------------------------------------|
 | `/cancel`       | Cancels Sunday volleyball and updates all messages   |
 | `/uncancel`     | Restores the Sunday event and clears cancel notices  |
+| `/version`      | Displays the current bot version                     |
 
 ---
 
@@ -100,3 +106,10 @@ Set these in Render or `.env`:
 - 🔔 Waitlist promotion notifications
 - 🤖 DM reminders for promoted players
 - 🔐 Admin dashboard or config via slash commands
+
+---
+
+## ✍️ Metadata
+
+- **Current Version:** `0.1.0`
+- **Author:** Jerry Wang **#Leaders&TheBest**
