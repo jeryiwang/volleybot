@@ -11,6 +11,7 @@ commands, and sending logs to a designated channel.
 
 import discord
 import datetime
+import logging
 import os
 
 from version import __version__
@@ -19,11 +20,24 @@ from sheets import get_confirmed_and_waitlist
 from utils import get_next_sunday, format_datetime, load_message_id, save_message_id, save_cancel_state
 
 ANNOUNCEMENTS_CHANNEL_ID = int(os.getenv("ANNOUNCEMENTS_CHANNEL_ID"))
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 ROSTER_CHANNEL_ID = int(os.getenv("ROSTER_CHANNEL_ID"))
 
 intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix="!", intents=intents)
+
+# === Logger Setup ===
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# === Run Discord Client ===
+def run_discord():
+    try:
+        logger.info("Starting Discord client...")
+        client.run(DISCORD_TOKEN)
+    except Exception as e:
+        logger.critical(f"Discord client failed to start: {e}")
 
 # === Main Roster Update Function ===
 async def update_roster_message(cancelled=False, reason=""):

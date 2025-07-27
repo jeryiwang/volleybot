@@ -18,7 +18,7 @@ import threading
 
 from version import __version__
 from discord.ext import tasks
-from discord_bot import client, update_roster_message, log_to_channel
+from discord_bot import client, log_to_channel, run_discord, update_roster_message
 from flask import Flask, request
 from utils import  format_datetime, load_cancel_state
 
@@ -27,7 +27,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # === Environment Variables ===
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
 PORT = int(os.environ.get("PORT", 8080))
 
@@ -99,9 +98,6 @@ async def on_ready():
 # === Main Entry Point ===
 if __name__ == "__main__":
     logger.info(f"Starting THM Volleyball Bot v{__version__}")
-
-    def run_discord():
-        client.run(DISCORD_TOKEN)
 
     threading.Thread(target=run_discord).start()
     app.run(host="0.0.0.0", port=PORT)
