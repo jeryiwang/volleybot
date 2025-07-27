@@ -30,15 +30,19 @@ sheet = gc.open(GOOGLE_SHEET_NAME).worksheet(GOOGLE_SHEET_TAB)
 
 # === Returns a list of confirmed and waitlisted participants ===
 def get_confirmed_and_waitlist():
-    sunday = get_next_sunday()
-    formatted_date = sunday.strftime('%-m/%-d/%Y')
+    try:
+        sunday = get_next_sunday()
+        formatted_date = sunday.strftime('%-m/%-d/%Y')
 
-    sheet_data = sheet.get_all_records()
-    participants = [
-        row['Name:'] for row in sheet_data
-        if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
-    ]
+        sheet_data = sheet.get_all_records()
+        participants = [
+            row['Name:'] for row in sheet_data
+            if str(row.get("PARTICIPATION Date (NOT birthday!)", "")).startswith(formatted_date)
+        ]
 
-    confirmed = participants[:21]
-    waitlist = participants[21:]
+        confirmed = participants[:21]
+        waitlist = participants[21:]
+    except:
+        confirmed, waitlist = [], []
+
     return confirmed, waitlist

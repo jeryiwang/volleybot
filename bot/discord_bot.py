@@ -47,11 +47,12 @@ async def update_roster_message(cancelled=False, reason=""):
 📝 Please arrive on time — late spots may be given to waitlisters."""
 
     msg_id = load_message_id()
-    channel = client.get_channel(ROSTER_CHANNEL_ID)
     try:
+        channel = client.get_channel(ROSTER_CHANNEL_ID)
         if msg_id and channel:
             msg = await channel.fetch_message(msg_id)
-            await msg.edit(content=message)
+            if msg.content != message:  # ✅ Only edit if different
+                await msg.edit(content=message)
         else:
             raise ValueError
     except:
@@ -89,7 +90,10 @@ async def cancel(interaction: discord.Interaction, reason: str = "No reason prov
     channel = client.get_channel(ANNOUNCEMENTS_CHANNEL_ID)
     roster_channel = client.get_channel(ROSTER_CHANNEL_ID)
     if channel:
-        await channel.send(f"🛑 **Sunday volleyball has been CANCELLED – {formatted_date}**\nReason: {reason}\nBy: {interaction.user.mention}")
+        await channel.send(
+            f"@everyone\n🛑 **Sunday volleyball has been CANCELLED – {formatted_date}**\n📝 Reason: {reason}\n👤 By: {interaction.user.mention}"
+        )
+
     if roster_channel:
         await update_roster_message(cancelled=True, reason=reason)
 

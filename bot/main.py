@@ -50,7 +50,7 @@ def keepalive():
 last_post_roster_time = None
 
 # === Post Roster Task ===
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=5)
 async def post_roster():
     logger.info("✅ post_roster() task started.")
     global last_post_roster_time
