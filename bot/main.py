@@ -37,13 +37,17 @@ app = Flask(__name__)
 def home():
     return "THM Volleyball Bot is running!"
 
-@app.route('/keepalive')
+@app.route("/keepalive")
 def keepalive():
-    user_agent = request.headers.get('User-Agent', 'unknown')
-    ip = request.remote_addr
-    timestamp = format_datetime(datetime.datetime.now())
-    logger.info(f"[{timestamp}] Keepalive ping received from {ip}, User-Agent: {user_agent}")
-    return "Alive and kickin'", 200
+    try:
+        user_agent = request.headers.get('User-Agent', 'unknown')
+        ip = request.remote_addr
+        timestamp = format_datetime(datetime.datetime.now())
+        logger.info(f"[{timestamp}] Keepalive ping from {ip}, User-Agent: {user_agent}")
+        return "Alive and kickin'", 200
+    except Exception as e:
+        logger.error(f"Keepalive error: {e}")
+        return "Still kickin' (barely)", 200
 
 # === State Files ===
 last_post_roster_time = None
@@ -75,7 +79,7 @@ async def post_roster_heartbeat():
     eastern = pytz.timezone('US/Eastern')
     now = datetime.datetime.now(eastern)
 
-    if last_post_roster_time and (now - last_post_roster_time).total_seconds() < 300:
+    if last_post_roster_time and (now - last_post_roster_time).total_seconds() < 600:
         await log_to_channel(log_channel, "✅ Bot is healthy. Last roster update:", error=format_datetime(last_post_roster_time))
     else:
         await log_to_channel(log_channel, "❌ Bot may be stalled. Last roster update:", error=format_datetime(last_post_roster_time) if last_post_roster_time else "never")
