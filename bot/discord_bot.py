@@ -17,7 +17,16 @@ import os
 from version import __version__
 from discord.ext import commands
 from sheets import get_confirmed_and_waitlist
-from utils import get_next_sunday, format_datetime, load_message_id, save_message_id, save_cancel_state
+from utils import (
+    get_next_sunday,
+    format_datetime,
+    load_message_id,
+    save_message_id,
+    save_cancel_state,
+    load_cached_roster_text,
+    save_cached_roster_text
+)
+
 
 ANNOUNCEMENTS_CHANNEL_ID = int(os.getenv("ANNOUNCEMENTS_CHANNEL_ID"))
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -26,7 +35,6 @@ ROSTER_CHANNEL_ID = int(os.getenv("ROSTER_CHANNEL_ID"))
 intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix="!", intents=intents)
-cached_roster_message = None
 
 # === Logger Setup ===
 logging.basicConfig(level=logging.INFO)
@@ -42,62 +50,60 @@ def run_discord():
 
 # === Main Roster Update Function ===
 async def update_roster_message(cancelled=False, reason=""):
-    global cached_roster_message
-
     sunday = get_next_sunday()
     confirmed, waitlist = get_confirmed_and_waitlist()
 
-    message = ""
+    new_content = ""
     if cancelled:
-        message += f"🚫 Sunday volleyball is CANCELLED - {sunday.strftime('%B %d, %Y')}\nReason: {reason}\n\n"
+        new_content += f"🚫 Sunday volleyball is CANCELLED - {sunday.strftime('%B %d, %Y')}\nReason: {reason}\n\n"
 
-    message += f"""📋 **THM Volleyball Roster - Sunday, {sunday.strftime('%B %d')}**
+    new_content += f"""📋 **THM Volleyball Roster - Sunday, {sunday.strftime('%B %d')}**
 
 ✅ Confirmed to Play:"""
-    message += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
-    message += "\n\n⏳ Waitlist:"
-    message += "\n" + "\n".join([f"- {name}" for name in waitlist]) if waitlist else "\nNone"
-    message += """
+    new_content += "\n" + "\n".join([f"{i+1}. {name}" for i, name in enumerate(confirmed)]) if confirmed else "\nNone"
+    new_content += "\n\n⏳ Waitlist:"
+    new_content += "\n" + "\n".join([f"- {name}" for name in waitlist]) if waitlist else "\nNone"
+    new_content += """
 
 📍 KMCD Gym | 2-5 PM  
 🚪 Enter through the double doors (north side)  
 📝 Please arrive on time — late spots may be given to waitlisters."""
+
+    # Only proceed if the content changed
+    cached_text = load_cached_roster_text()
+    if cached_text == new_content:
+        logger.info("ℹ️ Roster content unchanged. Skipping Discord update.")
+        return
 
     channel = client.get_channel(ROSTER_CHANNEL_ID)
     if not channel:
         logger.error("❌ Roster channel not found.")
         return
 
+    did_update = False
+    msg_id = load_message_id()
+
     try:
-        # Step 1: Fetch from message ID if cache is empty
-        if cached_roster_message is None:
-            msg_id = load_message_id()
-            if msg_id:
-                try:
-                    cached_roster_message = await channel.fetch_message(msg_id)
-                    logger.info("🔄 Cached message loaded from ID.")
-                except Exception as e:
-                    logger.warning(f"⚠️ Failed to fetch message ID {msg_id}: {e}")
-                    cached_roster_message = None
-
-        # Step 2: Use cached message if available
-        if cached_roster_message:
-            if cached_roster_message.content != message:
-                cached_roster_message = await cached_roster_message.edit(content=message)
-                logger.info("✅ Roster message updated (cached).")
-            else:
-                logger.info("ℹ️ No change in roster message (cached).")
-            return
-
-        # Step 3: Post new message if no cached or valid ID
-        msg = await channel.send(message)
-        cached_roster_message = msg
-        save_message_id(msg.id)
-        logger.info("✅ New roster message posted and cached.")
-
+        if msg_id:
+            try:
+                fetched_msg = await channel.fetch_message(msg_id)
+                await fetched_msg.edit(content=new_content)
+                logger.info("✅ Roster message updated.")
+                did_update = True
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to edit existing message: {e}")
+        if not msg_id or not did_update:
+            msg = await channel.send(new_content)
+            save_message_id(msg.id)
+            logger.info("✅ Posted new roster message.")
+            did_update = True
     except Exception as e:
         logger.error(f"❌ update_roster_message failed: {e}", exc_info=True)
+        return
 
+    # Save new content only if message was posted or updated
+    if did_update:
+        save_cached_roster_text(new_content)
 
 # === Log to Discord Channel Utility ===
 async def log_to_channel(channel, prefix, error=None):
