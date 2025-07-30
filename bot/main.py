@@ -18,7 +18,7 @@ import threading
 
 from version import __version__
 from discord.ext import tasks
-from discord_bot import client, log_to_channel, run_discord, update_roster_message
+from discord_bot import client, log_to_channel, run_discord, update_roster_message, cached_roster_message
 from flask import Flask, request
 from utils import  format_datetime, load_cancel_state
 
@@ -49,7 +49,7 @@ def keepalive():
 last_post_roster_time = None
 
 # === Post Roster Task ===
-@tasks.loop(minutes=5)
+@tasks.loop(minutes=33)
 async def post_roster():
     logger.info("✅ post_roster() task started.")
     global last_post_roster_time
@@ -64,7 +64,7 @@ async def post_roster():
         logger.error(f"post_roster() failed: {e}", exc_info=True)
 
 # === Heartbeat Task ===
-@tasks.loop(minutes=15)
+@tasks.loop(minutes=60)
 async def post_roster_heartbeat():
     logger.info("✅ post_roster_heartbeat() task started.")
     global last_post_roster_time
@@ -75,7 +75,7 @@ async def post_roster_heartbeat():
     eastern = pytz.timezone('US/Eastern')
     now = datetime.datetime.now(eastern)
 
-    if last_post_roster_time and (now - last_post_roster_time).total_seconds() < 300:
+    if last_post_roster_time and (now - last_post_roster_time).total_seconds() < 2280:  # 38 minutes
         await log_to_channel(log_channel, "✅ Bot is healthy. Last roster update:", error=format_datetime(last_post_roster_time))
     else:
         await log_to_channel(log_channel, "❌ Bot may be stalled. Last roster update:", error=format_datetime(last_post_roster_time) if last_post_roster_time else "never")
@@ -83,6 +83,9 @@ async def post_roster_heartbeat():
 # === Discord Bot Events ===
 @client.event
 async def on_ready():
+    global cached_roster_message
+    cached_roster_message = None  # Reset on bot restart
+
     try:
         synced = await client.tree.sync()
         logger.info(f"✅ Synced {len(synced)} slash commands.")

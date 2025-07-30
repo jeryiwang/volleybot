@@ -30,7 +30,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Posts a ✅ healthy or ❌ stale warning in the log channel based on this check.
 
 ### 🔄 Smart Roster Posting
-- Bot runs 24/7 (on Render) and updates the roster every minute.
+- Bot runs 24/7 (on Render) and updates the roster every 33 minutes.
 - If nothing has changed, it skips posting to avoid spam.
 - All messages are edited in-place using stored message IDs.
 
@@ -93,7 +93,7 @@ Set these in Render or `.env`:
 ## 📊 Monitoring & Reliability
 
 - `last_post_roster_time` is updated after every successful roster update.
-- `post_roster_heartbeat()` checks this every 15 minutes.
+- `post_roster_heartbeat()` checks this every hour.
 - Errors are logged to a dedicated Discord log channel (if provided).
 
 ---
