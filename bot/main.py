@@ -37,13 +37,17 @@ app = Flask(__name__)
 def home():
     return "THM Volleyball Bot is running!"
 
-@app.route('/keepalive')
+@app.route("/keepalive")
 def keepalive():
-    user_agent = request.headers.get('User-Agent', 'unknown')
-    ip = request.remote_addr
-    timestamp = format_datetime(datetime.datetime.now())
-    logger.info(f"[{timestamp}] Keepalive ping received from {ip}, User-Agent: {user_agent}")
-    return "Alive and kickin'", 200
+    try:
+        user_agent = request.headers.get('User-Agent', 'unknown')
+        ip = request.remote_addr
+        timestamp = format_datetime(datetime.datetime.now())
+        logger.info(f"[{timestamp}] Keepalive ping from {ip}, User-Agent: {user_agent}")
+        return "Alive and kickin'", 200
+    except Exception as e:
+        logger.error(f"Keepalive error: {e}")
+        return "Still kickin' (barely)", 200
 
 # === State Files ===
 last_post_roster_time = None
