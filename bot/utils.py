@@ -1,12 +1,12 @@
 """
 File: utils.py
 Author: Jerry Wang
-Date: 2025-07-26
+Date: 2025-07-30
 
 Shared utility functions for datetime handling, file I/O, and state management.
 
-Includes helpers to calculate the next Sunday, read/write JSON files, and track
-roster cancellation and message ID state.
+Includes helpers to calculate the next Sunday, read/write JSON files,
+read/write persistent cache, and track roster cancellation and message ID state.
 """
 
 import datetime
@@ -16,6 +16,7 @@ import pytz
 # === State Files ===
 MESSAGE_ID_FILE = "message_id.txt"
 CANCEL_FILE = "cancel_state.json"
+ROSTER_CACHE_FILE = "last_roster.txt"
 
 # === Time Utilities ===
 def get_next_sunday():
@@ -69,3 +70,14 @@ def save_cancel_state(state):
     sunday = get_next_sunday().isoformat()
     data = {sunday: state}
     save_json_file(CANCEL_FILE, data)
+
+def load_cached_roster_text():
+    try:
+        with open(ROSTER_CACHE_FILE, "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+
+def save_cached_roster_text(text):
+    with open(ROSTER_CACHE_FILE, "w") as f:
+        f.write(text)
