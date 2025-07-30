@@ -18,7 +18,7 @@ import threading
 
 from version import __version__
 from discord.ext import tasks
-from discord_bot import client, log_to_channel, run_discord, update_roster_message, cached_roster_message
+from discord_bot import client, log_to_channel, run_discord, update_roster_message
 from flask import Flask, request
 from utils import  format_datetime, load_cancel_state
 
@@ -87,9 +87,6 @@ async def post_roster_heartbeat():
 # === Discord Bot Events ===
 @client.event
 async def on_ready():
-    global cached_roster_message
-    cached_roster_message = None  # Reset on bot restart
-
     try:
         synced = await client.tree.sync()
         logger.info(f"✅ Synced {len(synced)} slash commands.")
@@ -99,8 +96,8 @@ async def on_ready():
     # === Start Tasks ===
     if not post_roster.is_running():
         post_roster.start()
-    if not post_roster_heartbeat.is_running():
-        post_roster_heartbeat.start()
+    # if not post_roster_heartbeat.is_running():
+    #     post_roster_heartbeat.start()
 
 # === Main Entry Point ===
 if __name__ == "__main__":
