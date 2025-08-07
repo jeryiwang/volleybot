@@ -24,13 +24,8 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Cancellation state is scoped per-Sunday and automatically reset.
 - Roster refreshes based on each week’s Google Sheet sign-ups.
 
-### 🩺 Heartbeat Monitoring
-- Every time the bot updates the roster, it records a timestamp.
-- A separate heartbeat loop runs every 15 minutes to check if the last update was within the past 5 minutes.
-- Posts a ✅ healthy or ❌ stale warning in the log channel based on this check.
-
 ### 🔄 Smart Roster Posting
-- Bot runs 24/7 (on Render) and updates the roster every 33 minutes.
+- Bot runs 24/7 (on Render) and updates the roster every 15 minutes.
 - If nothing has changed, it skips posting to avoid spam.
 - All messages are edited in-place using stored message IDs.
 
@@ -87,14 +82,6 @@ Set these in Render or `.env`:
 ### 3. Files Used
 - `cancel_state.json`: stores cancellation status for the current week
 - `message_id.txt`: tracks Discord message ID for roster message reuse
-
----
-
-## 📊 Monitoring & Reliability
-
-- `last_post_roster_time` is updated after every successful roster update.
-- `post_roster_heartbeat()` checks this every hour.
-- Errors are logged to a dedicated Discord log channel (if provided).
 
 ---
 
