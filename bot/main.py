@@ -49,40 +49,18 @@ def keepalive():
         logger.error(f"Keepalive error: {e}")
         return "Still kickin' (barely)", 200
 
-# === State Files ===
-last_post_roster_time = None
-
 # === Post Roster Task ===
-@tasks.loop(minutes=33)
+@tasks.loop(minutes=15)
 async def post_roster():
     logger.info("✅ post_roster() task started.")
-    global last_post_roster_time
     try:
         state = load_cancel_state()
         await update_roster_message(
             cancelled=state.get("is_cancelled"),
             reason=state.get("reason")
         )
-        last_post_roster_time = datetime.datetime.now(pytz.timezone('US/Eastern'))
     except Exception as e:
         logger.error(f"post_roster() failed: {e}", exc_info=True)
-
-# === Heartbeat Task ===
-@tasks.loop(minutes=60)
-async def post_roster_heartbeat():
-    logger.info("✅ post_roster_heartbeat() task started.")
-    global last_post_roster_time
-    log_channel = client.get_channel(LOG_CHANNEL_ID)
-    if not log_channel:
-        return
-
-    eastern = pytz.timezone('US/Eastern')
-    now = datetime.datetime.now(eastern)
-
-    if last_post_roster_time and (now - last_post_roster_time).total_seconds() < 2280:  # 38 minutes
-        await log_to_channel(log_channel, "✅ Bot is healthy. Last roster update:", error=format_datetime(last_post_roster_time))
-    else:
-        await log_to_channel(log_channel, "❌ Bot may be stalled. Last roster update:", error=format_datetime(last_post_roster_time) if last_post_roster_time else "never")
 
 # === Discord Bot Events ===
 @client.event
@@ -96,8 +74,6 @@ async def on_ready():
     # === Start Tasks ===
     if not post_roster.is_running():
         post_roster.start()
-    # if not post_roster_heartbeat.is_running():
-    #     post_roster_heartbeat.start()
 
 # === Main Entry Point ===
 if __name__ == "__main__":
