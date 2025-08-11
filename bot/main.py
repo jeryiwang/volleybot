@@ -50,7 +50,7 @@ def keepalive():
         return "Still kickin' (barely)", 200
 
 # === Post Roster Task ===
-@tasks.loop(minutes=15)
+@tasks.loop(minutes=31)
 async def post_roster():
     logger.info("✅ post_roster() task started.")
     try:
