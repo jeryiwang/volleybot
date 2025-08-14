@@ -18,6 +18,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - `/cancel [reason]`: Cancels volleyball for the week and updates both the announcements and roster channels with a 🚫 message.
 - `/uncancel`: Reverts cancellation and removes the 🚫 notice from the roster.
 - `/version`: Displays the current bot version (ephemeral response to user).
+- `/roster`: Pulls the current roster from the Google Sheet and updates the roster channel.
 
 ### 🔁 Weekly Reset Logic
 - Each Sunday is treated as a fresh week.
@@ -71,7 +72,6 @@ Set these in Render or `.env`:
 - `ROSTER_CHANNEL_ID`
 - `LOG_CHANNEL_ID`
 - `GOOGLE_CREDS_JSON` (your service account JSON blob, not a path)
-- `PORT` (optional, default = 8080)
 
 ### 2. Google Sheets Structure
 - Spreadsheet must contain:
