@@ -1,5 +1,6 @@
 discord.py
+Flask
 gspread
 oauth2client
-Flask
 pytz
+waitress

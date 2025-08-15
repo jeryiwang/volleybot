@@ -5,7 +5,7 @@ Date: 2025-08-15
 
 Main entry point for the THM Volleyball bot.
 
-- Runs the Flask keepalive server for Render uptime monitoring.
+- Runs the Flask keepalive server (served via waitress) for Render uptime monitoring.
 - Uses a continuous scheduler loop to update the weekly volleyball roster:
     * "Active hours" (Fri 12 PM - Sun 2 PM): ~15 min updates
     * "Quiet hours" (Mon-Thu): ~2 hour updates
@@ -24,13 +24,14 @@ from discord.ext import tasks
 from discord_bot import client, run_discord, update_roster_message
 from flask import Flask, request
 from utils import  format_datetime, get_roster_sleep_seconds, load_cancel_state
+from waitress import serve
 
 # === Logger Setup ===
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # === Environment Variables ===
-LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID"))
+LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID")) # Unused, but can be used for logging
 PORT = int(os.environ.get("PORT", 8080))
 
 # === Flask Server for Keepalive ===
@@ -83,4 +84,4 @@ if __name__ == "__main__":
     logger.info(f"Starting THM Volleyball Bot v{__version__}")
 
     threading.Thread(target=run_discord).start()
-    app.run(host="0.0.0.0", port=PORT)
+    serve(app, host="0.0.0.0", port=PORT, threads=2)

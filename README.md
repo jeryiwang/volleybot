@@ -36,7 +36,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 
 ### 🧠 Hosting & Uptime
 - Hosted on [Render](https://render.com)
-- Uses a minimal Flask app for port binding
+- Uses a minimal Flask app served by waitress for port binding (production-ready WSGI server)
 - Kept awake with `UptimeRobot` and `cron-job.org` pinging the `/keepalive` endpoint
 - Local files store state between runs (`cancel_state.json`, `message_id.txt`)
 - On startup, bot uses a small random delay before connecting to Discord, plus 15–30 min retry backoff on connection failures to reduce rate-limit risk.
@@ -105,5 +105,5 @@ Set these in Render or `.env`:
 
 ## ✍️ Metadata
 
-- **Current Version:** `0.2.0`
+- **Current Version:** `0.2.1`
 - **Author:** Jerry Wang **#Leaders&TheBest**
