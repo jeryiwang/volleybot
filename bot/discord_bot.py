@@ -1,12 +1,19 @@
 """
 File: discord_bot.py
 Author: Jerry Wang
-Date: 2025-07-26
+Date: 2025-08-15
 
 Handles Discord bot setup, slash commands, and roster message updates.
 
-Includes logic for posting/updating the weekly roster, handling /cancel and /uncancel
-commands, and sending logs to a designated channel.
+- Starts the Discord client with a random delayed start and retry backoff to reduce rate-limit risk.
+- Includes logic for posting/updating the weekly roster with cached content checks.
+- Provides slash commands:
+    * /roster - Force refresh the roster from Google Sheets.
+    * /cancel - Cancel the upcoming Sunday session and announce it.
+    * /uncancel - Revert a cancellation.
+    * /sync - Manually sync slash commands with Discord.
+    * /version - Show the bot version.
+- Can send log/status messages to a designated channel.
 """
 
 import discord

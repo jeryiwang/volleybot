@@ -1,17 +1,25 @@
 """
 File: utils.py
 Author: Jerry Wang
-Date: 2025-07-30
+Date: 2025-08-15
 
-Shared utility functions for datetime handling, file I/O, and state management.
+Shared utility functions for datetime handling, file I/O, state management, and scheduler timing.
 
-Includes helpers to calculate the next Sunday, read/write JSON files,
-read/write persistent cache, and track roster cancellation and message ID state.
+Includes helpers to:
+- Calculate the next Sunday
+- Read/write JSON files for persistent state
+- Read/write roster message cache
+- Track roster cancellation and message ID state
+- Determine next sleep interval for roster updates based on active/quiet hours
 """
+
 
 import datetime
 import json
 import pytz
+import random
+
+EASTERN = pytz.timezone("US/Eastern")
 
 # === State Files ===
 MESSAGE_ID_FILE = "message_id.txt"
@@ -24,8 +32,7 @@ def get_next_sunday():
     return today + datetime.timedelta((6 - today.weekday()) % 7)
 
 def format_datetime(dt):
-    eastern = pytz.timezone("US/Eastern")
-    return dt.astimezone(eastern).strftime('%Y-%m-%d %I:%M:%S %p %Z')
+    return dt.astimezone(EASTERN).strftime('%Y-%m-%d %I:%M:%S %p %Z')
 
 # === JSON File Utilities ===
 def load_json_file(filepath, default):
@@ -81,3 +88,21 @@ def load_cached_roster_text():
 def save_cached_roster_text(text):
     with open(ROSTER_CACHE_FILE, "w") as f:
         f.write(text)
+
+def get_roster_sleep_seconds():
+    """Returns how many seconds to sleep until next roster update."""
+    now = datetime.datetime.now(EASTERN)
+    weekday = now.weekday()  # Monday=0 ... Sunday=6
+    hour = now.hour
+
+    # Active window: Fri 12:00 PM → Sun 2:00 PM
+    active = (
+        (weekday == 4 and hour >= 12) or  # Friday noon onward
+        (weekday == 5) or                 # Saturday
+        (weekday == 6 and hour < 14)      # Sunday before 2pm
+    )
+
+    if active:
+        return random.randint(14*60, 16*60)   # ~15 min ±1 min
+    else:
+        return random.randint(115*60, 125*60) # ~2 hr ±5 min

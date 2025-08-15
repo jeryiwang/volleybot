@@ -18,7 +18,9 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - `/cancel [reason]`: Cancels volleyball for the week and updates both the announcements and roster channels with a 🚫 message.
 - `/uncancel`: Reverts cancellation and removes the 🚫 notice from the roster.
 - `/version`: Displays the current bot version (ephemeral response to user).
-- `/roster`: Pulls the current roster from the Google Sheet and updates the roster channel.
+- `/roster`: Manually pulls the current roster from the Google Sheet and updates the roster channel.
+- `/sync`: Manually syncs all slash commands with Discord (use only after command changes).
+
 
 ### 🔁 Weekly Reset Logic
 - Each Sunday is treated as a fresh week.
@@ -26,7 +28,9 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Roster refreshes based on each week’s Google Sheet sign-ups.
 
 ### 🔄 Smart Roster Posting
-- Bot runs 24/7 (on Render) and updates the roster every 43 minutes.
+- Bot runs 24/7 (on Render) and updates the roster on a dynamic schedule:
+  * Active hours (Fri 12 PM – Sun 2 PM): ~15 min updates
+  * Quiet hours (Mon–Thu): ~2 hour updates
 - If nothing has changed, it skips posting to avoid spam.
 - All messages are edited in-place using stored message IDs.
 
@@ -35,6 +39,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Uses a minimal Flask app for port binding
 - Kept awake with `UptimeRobot` and `cron-job.org` pinging the `/keepalive` endpoint
 - Local files store state between runs (`cancel_state.json`, `message_id.txt`)
+- On startup, bot uses a small random delay before connecting to Discord, plus 15–30 min retry backoff on connection failures to reduce rate-limit risk.
 
 ### 📦 Bot Versioning
 - Displays the current version in logs and via `/version` slash command.
@@ -60,6 +65,8 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 | `/cancel`       | Cancels Sunday volleyball and updates all messages   |
 | `/uncancel`     | Restores the Sunday event and clears cancel notices  |
 | `/version`      | Displays the current bot version                     |
+| `/roster`       | Force refresh the roster from Google Sheets          |
+| `/sync`         | Sync slash commands with Discord                     |
 
 ---
 
@@ -98,5 +105,5 @@ Set these in Render or `.env`:
 
 ## ✍️ Metadata
 
-- **Current Version:** `0.1.0`
+- **Current Version:** `0.2.0`
 - **Author:** Jerry Wang **#Leaders&TheBest**
