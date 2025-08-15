@@ -65,12 +65,7 @@ async def post_roster():
 # === Discord Bot Events ===
 @client.event
 async def on_ready():
-    try:
-        synced = await client.tree.sync()
-        logger.info(f"✅ Synced {len(synced)} slash commands.")
-    except Exception as e:
-        logger.info(f"Slash command sync failed: {e}")
-
+    logger.info(f"🤖 Logged in as {client.user}")
     # === Start Tasks ===
     if not post_roster.is_running():
         post_roster.start()

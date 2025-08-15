@@ -12,6 +12,8 @@ commands, and sending logs to a designated channel.
 import discord
 import datetime
 import logging
+import random
+import time
 import os
 
 from version import __version__
@@ -42,11 +44,21 @@ logger = logging.getLogger(__name__)
 
 # === Run Discord Client ===
 def run_discord():
-    try:
-        logger.info("Starting Discord client...")
-        client.run(DISCORD_TOKEN)
-    except Exception as e:
-        logger.critical(f"Discord client failed to start: {e}")
+    # small random delay at cold start so you don't align with other bots on same host
+    initial_delay = random.randint(30, 120)
+    logger.info(f"Starting Discord client after {initial_delay}s delay...")
+    time.sleep(initial_delay)
+
+    while True:
+        try:
+            client.run(DISCORD_TOKEN)   # blocks until disconnect or crash
+            break                       # clean exit
+        except Exception as e:
+            logger.critical(f"Discord client failed to start: {e}")
+            # wait 15–30 minutes before trying again
+            wait = random.randint(15 * 60, 30 * 60)
+            logger.warning(f"Retrying gateway connect in {wait} seconds...")
+            time.sleep(wait)
 
 # === Main Roster Update Function ===
 async def update_roster_message(cancelled=False, reason=""):
@@ -179,6 +191,19 @@ async def uncancel(interaction: discord.Interaction):
         await channel.send(f"✅ **Sunday volleyball is back on – {formatted_date}!**")
     if roster_channel:
         await update_roster_message(cancelled=False)
+
+# === Manual Slash Cmd Sync Command ===
+@client.tree.command(name="sync", description="Sync slash commands with Discord")
+@discord.app_commands.default_permissions(administrator=True)
+async def sync_commands(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    try:
+        synced = await client.tree.sync()
+        await interaction.followup.send(f"✅ Synced {len(synced)} slash commands.", ephemeral=True)
+        logger.info(f"✅ /sync used by {interaction.user.display_name} ({len(synced)} commands synced)")
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to sync: {e}", ephemeral=True)
+        logger.error(f"❌ /sync failed for {interaction.user.display_name}: {e}", exc_info=True)
 
 # === Discord Version Command ===
 @client.tree.command(name="version", description="Show the current bot version")
