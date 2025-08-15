@@ -26,7 +26,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Roster refreshes based on each week’s Google Sheet sign-ups.
 
 ### 🔄 Smart Roster Posting
-- Bot runs 24/7 (on Render) and updates the roster every 30 minutes.
+- Bot runs 24/7 (on Render) and updates the roster every 43 minutes.
 - If nothing has changed, it skips posting to avoid spam.
 - All messages are edited in-place using stored message IDs.
 
