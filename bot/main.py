@@ -76,6 +76,7 @@ async def roster_scheduler():
 # === Discord Bot Events ===
 @client.event
 async def on_ready():
+    await client.tree.sync()
     logger.info(f"🤖 Logged in as {client.user}")
     client.loop.create_task(roster_scheduler())
 
