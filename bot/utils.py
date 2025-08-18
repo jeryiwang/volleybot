@@ -89,20 +89,47 @@ def save_cached_roster_text(text):
     with open(ROSTER_CACHE_FILE, "w") as f:
         f.write(text)
 
-def get_roster_sleep_seconds():
-    """Returns how many seconds to sleep until next roster update."""
-    now = datetime.datetime.now(EASTERN)
-    weekday = now.weekday()  # Monday=0 ... Sunday=6
-    hour = now.hour
+def get_roster_sleep_seconds(status="edited", consecutive_429=0):
+    """
+    Decide how long to sleep before the next roster update.
 
-    # Active window: Fri 12:00 PM → Sun 2:00 PM
+    Args:
+        status (str): Result from update_roster_message.
+                      "edited", "nochange", "rate_limited", or "error"
+        consecutive_429 (int): Number of consecutive 429s.
+
+    Returns:
+        int: Sleep time in seconds.
+    """
+    # Handle 429 backoff first
+    if status == "rate_limited":
+        # Exponential backoff-ish: grow with each 429
+        # e.g. 1st = 1–1.5h, 2nd = 2–3h, 3rd = 4–6h, etc.
+        base_minutes = 60 * (2 ** (consecutive_429 - 1))
+        min_sleep = base_minutes
+        max_sleep = int(base_minutes * 1.5)
+        return random.randint(min_sleep * 60, max_sleep * 60)
+
+    # Handle generic errors
+    if status == "error":
+        return random.randint(45*60, 60*60)         # 45–60m
+
+    # Normal scheduling
+    now = datetime.datetime.now(EASTERN)
+    weekday, hour = now.weekday(), now.hour
     active = (
-        (weekday == 4 and hour >= 12) or  # Friday noon onward
-        (weekday == 5) or                 # Saturday
-        (weekday == 6 and hour < 14)      # Sunday before 2pm
+        (weekday == 4 and hour >= 12) or
+        (weekday == 5) or
+        (weekday == 6 and hour < 14)
     )
 
     if active:
-        return random.randint(14*60, 16*60)   # ~15 min ±1 min
+        base_sleep = random.randint(19*60, 21*60)   # ~20m
     else:
-        return random.randint(115*60, 125*60) # ~2 hr ±5 min
+        base_sleep = random.randint(115*60, 125*60) # ~2h
+
+    if status == "nochange" and active:
+        base_sleep += random.randint(10*60, 20*60)  # ease off a bit ~10–20m
+
+    return base_sleep
+

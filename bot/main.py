@@ -16,11 +16,11 @@ import datetime
 import logging
 import os
 import pytz
+import random
 import threading
 
 
 from version import __version__
-from discord.ext import tasks
 from discord_bot import client, run_discord, update_roster_message
 from flask import Flask, request
 from utils import  format_datetime, get_roster_sleep_seconds, load_cancel_state
@@ -55,28 +55,30 @@ def keepalive():
 
 # === Roster Scheduler Loop ===
 async def roster_scheduler():
+    consecutive_429 = 0
     while True:
         try:
             state = load_cancel_state()
-            await update_roster_message(
+            status = await update_roster_message(
                 cancelled=state.get("is_cancelled"),
                 reason=state.get("reason")
             )
         except Exception as e:
             logger.error(f"roster_scheduler failed: {e}", exc_info=True)
-            sleep_s = random.randint(45*60, 60*60)  # backoff 45–60 min
-            logger.warning(f"Error occurred, sleeping {sleep_s/60:.1f} min before retry")
-            await asyncio.sleep(sleep_s)
-            continue
+            status = "error"
 
-        sleep_s = get_roster_sleep_seconds()
-        logger.info(f"Next roster check in {sleep_s/60:.1f} minutes")
+        if status == "rate_limited":
+            consecutive_429 += 1
+        else:
+            consecutive_429 = 0
+
+        sleep_s = get_roster_sleep_seconds(status=status, consecutive_429=consecutive_429)
+        logger.info(f"Next roster check in {sleep_s/60:.1f} minutes (status={status}, consecutive_429={consecutive_429})")
         await asyncio.sleep(sleep_s)
 
 # === Discord Bot Events ===
 @client.event
 async def on_ready():
-    await client.tree.sync()
     logger.info(f"🤖 Logged in as {client.user}")
     client.loop.create_task(roster_scheduler())
 

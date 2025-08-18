@@ -24,6 +24,7 @@ import time
 import os
 
 from version import __version__
+from discord.errors import HTTPException
 from discord.ext import commands
 from sheets import get_confirmed_and_waitlist
 from utils import (
@@ -92,12 +93,12 @@ async def update_roster_message(cancelled=False, reason=""):
     cached_text = load_cached_roster_text()
     if cached_text == new_content:
         logger.info("ℹ️ Roster content unchanged. Skipping Discord update.")
-        return
+        return "nochange"
 
     channel = client.get_channel(ROSTER_CHANNEL_ID)
     if not channel:
         logger.error("❌ Roster channel not found.")
-        return
+        return "error"
 
     did_update = False
     msg_id = load_message_id()
@@ -105,24 +106,39 @@ async def update_roster_message(cancelled=False, reason=""):
     try:
         if msg_id:
             try:
-                fetched_msg = await channel.fetch_message(msg_id)
-                await fetched_msg.edit(content=new_content)
+                partial = channel.get_partial_message(msg_id)
+                await partial.edit(content=new_content)
                 logger.info("✅ Roster message updated.")
                 did_update = True
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to edit existing message: {e}")
+            except HTTPException as he:
+                if he.status == 429:
+                    logger.warning("⛔ Rate limited on edit (429).")
+                    return "rate_limited"
+                logger.warning(f"⚠️ Edit failed, will try send: {he}")
+
         if not msg_id or not did_update:
-            msg = await channel.send(new_content)
-            save_message_id(msg.id)
-            logger.info("✅ Posted new roster message.")
-            did_update = True
+            try:
+                msg = await channel.send(new_content)
+                save_message_id(msg.id)
+                logger.info("✅ Posted new roster message.")
+                did_update = True
+            except HTTPException as he:
+                if he.status == 429:
+                    logger.warning("⛔ Rate limited on send (429).")
+                    return "rate_limited"
+                logger.error(f"❌ Send failed: {he}", exc_info=True)
+                return "error"
+
     except Exception as e:
         logger.error(f"❌ update_roster_message failed: {e}", exc_info=True)
-        return
+        return "error"
 
     # Save new content only if message was posted or updated
     if did_update:
         save_cached_roster_text(new_content)
+        return "edited"
+
+    return "error"
 
 # === Log to Discord Channel Utility ===
 async def log_to_channel(channel, prefix, error=None):

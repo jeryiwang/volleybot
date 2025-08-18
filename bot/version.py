@@ -6,4 +6,4 @@ Date: 2025-07-26
 Defines the current version of the THM Volleyball Bot.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"

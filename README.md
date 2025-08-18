@@ -21,7 +21,6 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - `/roster`: Manually pulls the current roster from the Google Sheet and updates the roster channel.
 - `/sync`: Manually syncs all slash commands with Discord (use only after command changes).
 
-
 ### 🔁 Weekly Reset Logic
 - Each Sunday is treated as a fresh week.
 - Cancellation state is scoped per-Sunday and automatically reset.
@@ -32,6 +31,7 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
   * Active hours (Fri 12 PM – Sun 2 PM): ~15 min updates
   * Quiet hours (Mon–Thu): ~2 hour updates
 - If nothing has changed, it skips posting to avoid spam.
+- If Discord rate-limits the bot (429s), it automatically backs off with increasing cooldowns before retrying.
 - All messages are edited in-place using stored message IDs.
 
 ### 🧠 Hosting & Uptime
@@ -39,7 +39,8 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Uses a minimal Flask app served by waitress for port binding (production-ready WSGI server)
 - Kept awake with `UptimeRobot` and `cron-job.org` pinging the `/keepalive` endpoint
 - Local files store state between runs (`cancel_state.json`, `message_id.txt`)
-- On startup, bot uses a small random delay before connecting to Discord, plus 15–30 min retry backoff on connection failures to reduce rate-limit risk.
+- On startup, the bot waits a random 30–120s before connecting to Discord, and uses 15–30 min retry backoff on connection failures.
+- During runtime, if the Discord API returns too many requests (429), the bot dynamically scales its cooldown window to reduce load.
 
 ### 📦 Bot Versioning
 - Displays the current version in logs and via `/version` slash command.
@@ -105,5 +106,5 @@ Set these in Render or `.env`:
 
 ## ✍️ Metadata
 
-- **Current Version:** `0.2.1`
+- **Current Version:** `0.2.2`
 - **Author:** Jerry Wang **#Leaders&TheBest**
