@@ -162,6 +162,8 @@ async def roster_command(interaction: discord.Interaction):
     async def do_update():
         try:
             status = await update_roster_message()
+            await asyncio.sleep(2)  # 🛑 Cooldown to avoid Cloudflare 429
+
             if status == "edited":
                 msg = "✅ Roster updated successfully."
             elif status == "nochange":
@@ -181,7 +183,6 @@ async def roster_command(interaction: discord.Interaction):
                 logger.warning("⚠️ Could not send error followup message.")
 
     client.loop.create_task(do_update())
-
 
 # === Discord Cancel Command ===
 @client.tree.command(name="cancel", description="Cancel this Sunday's volleyball session")
@@ -243,14 +244,20 @@ async def sync_commands(interaction: discord.Interaction):
     async def do_sync():
         try:
             synced = await client.tree.sync()
+            await asyncio.sleep(2)  # 🛑 Cooldown to avoid Cloudflare 429
+
             msg = f"✅ Synced {len(synced)} slash commands."
             await interaction.followup.send(msg, ephemeral=True)
             logger.info(f"✅ /sync used by {interaction.user.display_name} ({len(synced)} commands synced)")
         except Exception as e:
-            await interaction.followup.send(f"❌ Failed to sync: {e}", ephemeral=True)
             logger.error(f"❌ /sync failed for {interaction.user.display_name}: {e}", exc_info=True)
+            try:
+                await interaction.followup.send(f"❌ Failed to sync: {e}", ephemeral=True)
+            except:
+                logger.warning("⚠️ Could not send error followup message.")
 
     client.loop.create_task(do_sync())
+    
 # === Discord Version Command ===
 @client.tree.command(name="version", description="Show the current bot version")
 async def version_command(interaction: discord.Interaction):
