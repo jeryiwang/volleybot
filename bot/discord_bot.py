@@ -155,15 +155,32 @@ async def log_to_channel(channel, prefix, error=None):
 @client.tree.command(name="roster", description="Force refresh the roster from Google Sheets")
 @discord.app_commands.default_permissions(administrator=True)
 async def roster_command(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
+    # Step 1: Respond immediately
+    await interaction.response.send_message("⏳ Updating roster in the background...", ephemeral=True)
 
-    try:
-        await update_roster_message()
-        await interaction.followup.send("✅ Roster successfully refreshed from Google Sheets.", ephemeral=True)
-        logger.info(f"✅ /roster used by {interaction.user.display_name}")
-    except Exception as e:
-        logger.error(f"❌ /roster failed for {interaction.user.display_name}: {e}", exc_info=True)
-        await interaction.followup.send("❌ Failed to refresh the roster. Check logs for details.", ephemeral=True)
+    # Step 2: Background update
+    async def do_update():
+        try:
+            status = await update_roster_message()
+            if status == "edited":
+                msg = "✅ Roster updated successfully."
+            elif status == "nochange":
+                msg = "✅ No changes — roster already up to date."
+            elif status == "rate_limited":
+                msg = "⚠️ Roster update was rate-limited. Try again later."
+            else:
+                msg = "❌ Roster update failed. Check logs."
+
+            await interaction.followup.send(msg, ephemeral=True)
+            logger.info(f"✅ /roster used by {interaction.user.display_name} - status: {status}")
+        except Exception as e:
+            logger.error(f"❌ /roster crashed for {interaction.user.display_name}: {e}", exc_info=True)
+            try:
+                await interaction.followup.send("❌ Failed to refresh the roster due to an internal error.", ephemeral=True)
+            except:
+                logger.warning("⚠️ Could not send error followup message.")
+
+    client.loop.create_task(do_update())
 
 
 # === Discord Cancel Command ===
@@ -219,15 +236,21 @@ async def uncancel(interaction: discord.Interaction):
 @client.tree.command(name="sync", description="Sync slash commands with Discord")
 @discord.app_commands.default_permissions(administrator=True)
 async def sync_commands(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    try:
-        synced = await client.tree.sync()
-        await interaction.followup.send(f"✅ Synced {len(synced)} slash commands.", ephemeral=True)
-        logger.info(f"✅ /sync used by {interaction.user.display_name} ({len(synced)} commands synced)")
-    except Exception as e:
-        await interaction.followup.send(f"❌ Failed to sync: {e}", ephemeral=True)
-        logger.error(f"❌ /sync failed for {interaction.user.display_name}: {e}", exc_info=True)
+    # Respond immediately
+    await interaction.response.send_message("🔄 Syncing commands in background...", ephemeral=True)
 
+    # Run the actual sync in the background
+    async def do_sync():
+        try:
+            synced = await client.tree.sync()
+            msg = f"✅ Synced {len(synced)} slash commands."
+            await interaction.followup.send(msg, ephemeral=True)
+            logger.info(f"✅ /sync used by {interaction.user.display_name} ({len(synced)} commands synced)")
+        except Exception as e:
+            await interaction.followup.send(f"❌ Failed to sync: {e}", ephemeral=True)
+            logger.error(f"❌ /sync failed for {interaction.user.display_name}: {e}", exc_info=True)
+
+    client.loop.create_task(do_sync())
 # === Discord Version Command ===
 @client.tree.command(name="version", description="Show the current bot version")
 async def version_command(interaction: discord.Interaction):

@@ -80,6 +80,15 @@ async def roster_scheduler():
 @client.event
 async def on_ready():
     logger.info(f"🤖 Logged in as {client.user}")
+
+    # Optional one-time slash sync
+    if os.getenv("ENABLE_BOOT_SYNC", "false").lower() == "true":
+        try:
+            synced = await client.tree.sync()
+            logger.info(f"✅ Boot-time slash sync completed ({len(synced)} commands synced)")
+        except Exception as e:
+            logger.error(f"❌ Boot-time sync failed: {e}", exc_info=True)
+
     client.loop.create_task(roster_scheduler())
 
 # === Main Entry Point ===
