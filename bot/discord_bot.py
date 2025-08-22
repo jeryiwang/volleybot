@@ -15,7 +15,6 @@ Handles Discord bot setup, slash commands, and roster message updates.
     * /version - Show the bot version.
 - Can send log/status messages to a designated channel.
 """
-import asyncio
 import discord
 import datetime
 import logging
@@ -155,15 +154,13 @@ async def log_to_channel(channel, prefix, error=None):
 @client.tree.command(name="roster", description="Force refresh the roster from Google Sheets")
 @discord.app_commands.default_permissions(administrator=True)
 async def roster_command(interaction: discord.Interaction):
-    # Step 1: Respond immediately
-    await interaction.response.send_message("⏳ Updating roster in the background...", ephemeral=True)
+    await interaction.response.defer(ephemeral=True)
 
-    # Step 2: Background update
     async def do_update():
         try:
             status = await update_roster_message()
-            await asyncio.sleep(2)  # 🛑 Cooldown to avoid Cloudflare 429
 
+            # No followup, just edit original
             if status == "edited":
                 msg = "✅ Roster updated successfully."
             elif status == "nochange":
@@ -173,14 +170,14 @@ async def roster_command(interaction: discord.Interaction):
             else:
                 msg = "❌ Roster update failed. Check logs."
 
-            await interaction.followup.send(msg, ephemeral=True)
+            await interaction.edit_original_response(content=msg)
             logger.info(f"✅ /roster used by {interaction.user.display_name} - status: {status}")
         except Exception as e:
             logger.error(f"❌ /roster crashed for {interaction.user.display_name}: {e}", exc_info=True)
             try:
-                await interaction.followup.send("❌ Failed to refresh the roster due to an internal error.", ephemeral=True)
+                await interaction.edit_original_response(content="❌ Failed to refresh the roster due to an internal error.")
             except:
-                logger.warning("⚠️ Could not send error followup message.")
+                logger.warning("⚠️ Could not edit original response.")
 
     client.loop.create_task(do_update())
 
@@ -237,24 +234,20 @@ async def uncancel(interaction: discord.Interaction):
 @client.tree.command(name="sync", description="Sync slash commands with Discord")
 @discord.app_commands.default_permissions(administrator=True)
 async def sync_commands(interaction: discord.Interaction):
-    # Respond immediately
-    await interaction.response.send_message("🔄 Syncing commands in background...", ephemeral=True)
+    await interaction.response.defer(ephemeral=True)
 
-    # Run the actual sync in the background
     async def do_sync():
         try:
             synced = await client.tree.sync()
-            await asyncio.sleep(2)  # 🛑 Cooldown to avoid Cloudflare 429
-
             msg = f"✅ Synced {len(synced)} slash commands."
-            await interaction.followup.send(msg, ephemeral=True)
+            await interaction.edit_original_response(content=msg)
             logger.info(f"✅ /sync used by {interaction.user.display_name} ({len(synced)} commands synced)")
         except Exception as e:
             logger.error(f"❌ /sync failed for {interaction.user.display_name}: {e}", exc_info=True)
             try:
-                await interaction.followup.send(f"❌ Failed to sync: {e}", ephemeral=True)
+                await interaction.edit_original_response(content=f"❌ Failed to sync: {e}")
             except:
-                logger.warning("⚠️ Could not send error followup message.")
+                logger.warning("⚠️ Could not edit original response after /sync failure.")
 
     client.loop.create_task(do_sync())
     
