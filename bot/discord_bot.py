@@ -15,7 +15,7 @@ Handles Discord bot setup, slash commands, and roster message updates.
     * /version - Show the bot version.
 - Can send log/status messages to a designated channel.
 """
-
+import asyncio
 import discord
 import datetime
 import logging
