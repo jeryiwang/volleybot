@@ -28,8 +28,8 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 
 ### 🔄 Smart Roster Posting
 - Bot runs 24/7 (on Render) and updates the roster on a dynamic schedule:
-  * Active hours (Fri 12 PM – Sun 2 PM): ~15 min updates
-  * Quiet hours (Mon–Thu): ~2 hour updates
+  * Active hours (Fri 12 PM – Sun 2 PM): ~25 min updates
+  * Quiet hours (Mon–Thu): ~2.5 hour updates
 - If nothing has changed, it skips posting to avoid spam.
 - If Discord rate-limits the bot (429s), it automatically backs off with increasing cooldowns before retrying.
 - On startup, the bot automatically re-links to the most recent roster message in the channel (if it exists). This prevents duplicate posts after a Render restart or redeploy.
