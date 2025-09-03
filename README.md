@@ -98,7 +98,7 @@ Set these in Render or `.env`:
 
 - ✅ Player reaction signup on Discord
 - 📈 Attendance tracking across weeks
-- 📣 Auto-post to Facebook
+- 📣 Auto-post to Facebook (Scrapped)
 - 🔔 Waitlist promotion notifications
 - 🤖 DM reminders for promoted players
 - 🔐 Admin dashboard or config via slash commands
