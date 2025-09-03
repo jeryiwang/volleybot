@@ -32,7 +32,8 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
   * Quiet hours (Mon–Thu): ~2 hour updates
 - If nothing has changed, it skips posting to avoid spam.
 - If Discord rate-limits the bot (429s), it automatically backs off with increasing cooldowns before retrying.
-- All messages are edited in-place using stored message IDs.
+- On startup, the bot automatically re-links to the most recent roster message in the channel (if it exists). This prevents duplicate posts after a Render restart or redeploy.
+- All subsequent updates edit that roster message in-place using the stored message ID and cached content.
 
 ### 🧠 Hosting & Uptime
 - Hosted on [Render](https://render.com)
