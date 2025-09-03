@@ -21,7 +21,7 @@ import threading
 
 
 from version import __version__
-from discord_bot import client, run_discord, update_roster_message
+from discord_bot import bootstrap_roster_message, client, run_discord, update_roster_message
 from flask import Flask, request
 from utils import  format_datetime, get_roster_sleep_seconds, load_cancel_state
 from waitress import serve
@@ -88,6 +88,12 @@ async def on_ready():
             logger.info(f"✅ Boot-time slash sync completed ({len(synced)} commands synced)")
         except Exception as e:
             logger.error(f"❌ Boot-time sync failed: {e}", exc_info=True)
+
+     # Bootstrap roster link before kicking off the scheduler
+    try:
+        await bootstrap_roster_message()
+    except Exception as e:
+        logger.error(f"bootstrap on_ready failed: {e}", exc_info=True)
 
     client.loop.create_task(roster_scheduler())
 

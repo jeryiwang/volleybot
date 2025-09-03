@@ -106,5 +106,5 @@ Set these in Render or `.env`:
 
 ## ✍️ Metadata
 
-- **Current Version:** `0.2.3`
+- **Current Version:** `0.2.4`
 - **Author:** Jerry Wang **#Leaders&TheBest**

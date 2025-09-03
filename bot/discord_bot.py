@@ -15,6 +15,7 @@ Handles Discord bot setup, slash commands, and roster message updates.
     * /version - Show the bot version.
 - Can send log/status messages to a designated channel.
 """
+import asyncio
 import discord
 import datetime
 import logging
@@ -149,6 +150,51 @@ async def log_to_channel(channel, prefix, error=None):
     if error:
         msg += f": `{str(error)}`"
     await channel.send(msg)
+
+# === Bootstrap Roster Message on Startup ===
+async def bootstrap_roster_message():
+    """
+    On startup, ensure we have a valid roster message ID without creating duplicates.
+    - If we have a stored message_id and it's valid, keep it.
+    - Otherwise scan recent channel history for the last roster post by this bot,
+      link it (save its ID + content cache), and avoid posting a new message.
+    """
+    channel = client.get_channel(ROSTER_CHANNEL_ID)
+    if not channel:
+        logger.error("❌ bootstrap: Roster channel not found.")
+        return
+
+    # tiny delay to avoid hammering right after gateway connect
+    await asyncio.sleep(1.5)
+
+    msg_id = load_message_id()
+    if msg_id:
+        try:
+            # cheap validation; only fetch if needed
+            partial = channel.get_partial_message(msg_id)
+            _ = await partial.fetch()
+            logger.info(f"🔗 bootstrap: Existing roster message is valid (id={msg_id}).")
+            return
+        except discord.NotFound:
+            logger.warning("bootstrap: Stored roster message not found; will try to link an existing one.")
+        except HTTPException as he:
+            logger.warning(f"bootstrap: Could not validate stored message ({he}); scanning history...")
+
+    # No valid stored ID — scan recent messages to find our last roster post
+    marker_prefixes = (
+        "📋 **THM Volleyball Roster - Sunday,",
+        "🚫 Sunday volleyball is CANCELLED -",
+    )
+    try:
+        async for m in channel.history(limit=5):  # keep gentle; adjust if needed
+            if m.author.id == client.user.id and any(m.content.startswith(p) for p in marker_prefixes):
+                save_message_id(m.id)
+                save_cached_roster_text(m.content)
+                logger.info(f"🔗 bootstrap: Linked existing roster message (id={m.id}).")
+                return
+        logger.info("ℹ️ bootstrap: No existing roster message found; will create on next update.")
+    except Exception as e:
+        logger.error(f"bootstrap: Failed scanning history: {e}", exc_info=True)
 
 # === Roster Force Refresh Command ===
 @client.tree.command(name="roster", description="Force refresh the roster from Google Sheets")
