@@ -1,7 +1,7 @@
 """
 File: version.py
 Author: Jerry Wang
-Date: 2025-07-26
+Date: 2025-09-04
 
 Defines the current version of the THM Volleyball Bot.
 """

@@ -1,13 +1,13 @@
 """
 File: main.py
 Author: Jerry Wang
-Date: 2025-08-15
+Date: 2025-09-04
 
 Main entry point for the THM Volleyball bot.
 
 - Runs the Flask keepalive server (served via waitress) for Render uptime monitoring.
 - Uses a continuous scheduler loop to update the weekly volleyball roster:
-    * "Active hours" (Fri 12 PM - Sun 2 PM): ~15 min updates
+    * "Active hours" (Fri 12 PM - Sun 2 PM): ~25 min updates
     * "Quiet hours" (Mon-Thu): ~2 hour updates
 """
 

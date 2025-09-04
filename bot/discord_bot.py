@@ -1,7 +1,7 @@
 """
 File: discord_bot.py
 Author: Jerry Wang
-Date: 2025-08-15
+Date: 2025-09-04
 
 Handles Discord bot setup, slash commands, and roster message updates.
 
