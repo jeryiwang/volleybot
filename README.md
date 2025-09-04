@@ -14,13 +14,6 @@ The bot reads player sign-ups from a Google Form response sheet and keeps the Di
 - Separates players into ✅ Confirmed (up to 21) and ⏳ Waitlist.
 - Includes location, entrance, and arrival instructions in the message footer.
 
-### 🛑 Slash Commands
-- `/cancel [reason]`: Cancels volleyball for the week and updates both the announcements and roster channels with a 🚫 message.
-- `/uncancel`: Reverts cancellation and removes the 🚫 notice from the roster.
-- `/version`: Displays the current bot version (ephemeral response to user).
-- `/roster`: Manually pulls the current roster from the Google Sheet and updates the roster channel.
-- `/sync`: Manually syncs all slash commands with Discord (use only after command changes).
-
 ### 🔁 Weekly Reset Logic
 - Each Sunday is treated as a fresh week.
 - Cancellation state is scoped per-Sunday and automatically reset.
@@ -107,5 +100,5 @@ Set these in Render or `.env`:
 
 ## ✍️ Metadata
 
-- **Current Version:** `0.2.4`
+- **Current Version:** `1.0.0`
 - **Author:** Jerry Wang **#Leaders&TheBest**
